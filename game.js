@@ -33,6 +33,17 @@ const TIME_CAP_MS = 15000;                       // response time capped, scaled
 
 const DELAY_NEXT_MS = 1200;                      // pause before the next question
 
+// The mode is hidden from players. It comes from the link, e.g.
+//   index.html?mode=rule        (also: static, predictive)
+// With no valid mode in the link, one of the three is picked at random.
+const MODES = ["static", "rule", "predictive"];
+
+function getMode() {
+  const fromLink = new URLSearchParams(window.location.search).get("mode");
+  if (MODES.includes(fromLink)) return fromLink;
+  return MODES[Math.floor(Math.random() * MODES.length)];
+}
+
 
 /* ---------- 2. QUESTION GENERATOR ---------- */
 
@@ -142,6 +153,10 @@ function predictiveEngine(state, features) {
           + MODEL.w_retry * features.retry;
   const p = 1 / (1 + Math.exp(-z));
 
+  // Wait until there are WINDOW answers at the current level, so one lucky
+  // (or unlucky) answer cannot change the level on its own.
+  if (state.history.length < WINDOW) return { level: state.level, p };
+
   let level = state.level;
   if (p > P_UP) level = clampLevel(level + 1);
   else if (p < P_DOWN) level = clampLevel(level - 1);
@@ -166,7 +181,7 @@ const el = id => document.getElementById(id);
 function startGame() {
   state = {
     playerId: el("player-id").value.trim() || "anon",
-    mode: el("mode-select").value,
+    mode: getMode(),
     level: parseInt(el("level-select").value, 10),
     sessionId: "S" + Date.now(),
     questionIndex: 0,
@@ -241,6 +256,10 @@ function finishQuestion(finalCorrect) {
   state.level = decision.level;
 
   logQuestion(oldLevel, firstTryCorrect, finalCorrect, timeMs, features, decision);
+
+  // After a level change, start a fresh window so the next decision
+  // is based on answers given at the new level only.
+  if (decision.level !== oldLevel) state.history = [];
 
   state.questionIndex++;
   setTimeout(showNextQuestion, DELAY_NEXT_MS);
