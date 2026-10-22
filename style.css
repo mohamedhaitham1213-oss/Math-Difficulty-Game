@@ -1,50 +1,171 @@
-/* ---------- Page ---------- */
+/* ==========================================================
+   Math Adventure - styles
+   1. Colours and basics   2. Layout   3. Start/end screens
+   4. Game screen          5. Buttons  6. Small screens
+   ========================================================== */
+
+/* ---------- 1. COLOURS AND BASICS ---------- */
+:root {
+  --blue: #2a5db0;
+  --blue-dark: #1e4687;
+  --yellow: #ffb703;
+  --green: #2a9d8f;
+  --red: #e63946;
+  --text: #223;
+  --muted: #667;
+}
+
+* { box-sizing: border-box; }
+
 body {
-  font-family: Arial, sans-serif;
-  background: #eef6ff;
   margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 16px;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  color: var(--text);
   text-align: center;
+  background: linear-gradient(160deg, #cfe5ff 0%, #f3e9ff 100%);
 }
 
+.hidden { display: none !important; }
+
+
+/* ---------- 2. LAYOUT ---------- */
 .card {
-  max-width: 480px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 520px;
   background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.13);
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: 0 10px 30px rgba(42, 93, 176, 0.18);
 }
 
-h1 { margin: 0 0 8px; color: #2a5db0; }
-label { display: block; margin: 10px 0; }
-.small { font-size: 14px; color: #555; }
-.hidden { display: none; }
+h1 { margin: 4px 0; font-size: 32px; color: var(--blue); }
+.subtitle { margin: 0 0 20px; color: var(--muted); }
+.logo { font-size: 56px; line-height: 1.1; }
 
-/* ---------- Controls ---------- */
-select, input {
+
+/* ---------- 3. START AND END SCREENS ---------- */
+label {
+  display: block;
+  margin: 14px 0 4px;
+  font-weight: bold;
+  text-align: left;
+  color: var(--muted);
+}
+
+input, select {
+  width: 100%;
   font-size: 18px;
-  padding: 8px;
-  margin: 6px;
-  border-radius: 8px;
-  border: 1px solid #aaa;
-}
-
-button {
-  font-size: 20px;
-  padding: 12px 18px;
-  margin: 6px;
-  border: 0;
+  padding: 12px;
+  border: 2px solid #d5dcef;
   border-radius: 12px;
-  background: #2a5db0;
-  color: #fff;
-  cursor: pointer;
+  background: #fafbff;
+}
+input:focus, select:focus { outline: none; border-color: var(--blue); }
+
+#summary {
+  margin: 16px 0 22px;
+  padding: 18px;
+  font-size: 34px;
+  font-weight: bold;
+  color: var(--blue);
+  background: #eef4ff;
+  border-radius: 16px;
 }
 
-/* ---------- Game ---------- */
-#question { font-size: 44px; margin: 20px 0; }
-#message  { min-height: 28px; font-size: 20px; }
+.buttons { display: flex; flex-direction: column; gap: 10px; }
 
-button.option { background: #ffb703; color: #222; min-width: 90px; }
-button.correct { background: #2a9d8f !important; color: #fff; }
-button.wrong   { background: #e63946 !important; color: #fff; }
+
+/* ---------- 4. GAME SCREEN ---------- */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: var(--muted);
+}
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 14px;
+}
+.badge.level-1 { background: var(--green); }
+.badge.level-2 { background: var(--yellow); color: #222; }
+.badge.level-3 { background: var(--red); }
+
+.progress {
+  height: 12px;
+  background: #e6ecf8;
+  border-radius: 999px;
+  overflow: hidden;
+}
+#progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--blue), #6aa0ff);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+#question {
+  margin: 28px 0;
+  padding: 24px 8px;
+  font-size: 48px;
+  font-weight: bold;
+  background: #f4f7ff;
+  border-radius: 18px;
+}
+
+#options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+#message { min-height: 34px; margin-top: 18px; font-size: 22px; font-weight: bold; }
+
+
+/* ---------- 5. BUTTONS ---------- */
+button {
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+button:active:not(:disabled) { transform: scale(0.96); }
+
+button.primary { background: var(--blue); color: #fff; margin-top: 22px; }
+.buttons button.primary { margin-top: 0; }
+button.primary:hover { background: var(--blue-dark); }
+
+button.secondary { background: #e6ecf8; color: var(--blue); }
+
+button.option {
+  padding: 20px 10px;
+  font-size: 28px;
+  background: var(--yellow);
+  color: #222;
+  box-shadow: 0 4px 0 #d99a00;
+}
+button.option:disabled { cursor: default; }
+button.correct { background: var(--green) !important; color: #fff; box-shadow: 0 4px 0 #1f776c; }
+button.wrong   { background: var(--red) !important;   color: #fff; box-shadow: 0 4px 0 #b02a35; }
+
+
+/* ---------- 6. SMALL SCREENS ---------- */
+@media (max-width: 400px) {
+  .card { padding: 20px 14px; }
+  #question { font-size: 38px; }
+  button.option { font-size: 24px; }
+}
