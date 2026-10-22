@@ -7,30 +7,42 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="card">
+  <main class="card">
 
     <!-- Screen 1: start -->
     <section id="start-screen">
+      <div class="logo">🚀</div>
       <h1>Math Adventure</h1>
+      <p class="subtitle">Answer the questions and collect your stars!</p>
 
-      <label>Player ID:<br>
-        <input id="player-id" placeholder="e.g. P01">
-      </label>
+      <label for="player-id">Your ID</label>
+      <input id="player-id" placeholder="e.g. P01" autocomplete="off">
 
-      <label>Starting level:<br>
-        <select id="level-select">
-          <option value="1">Easy</option>
-          <option value="2" selected>Medium</option>
-          <option value="3">Hard</option>
-        </select>
-      </label>
+      <label for="mode-select">Mode</label>
+      <select id="mode-select">
+        <option value="static">Static (fixed level)</option>
+        <option value="rule">Rule-based</option>
+        <option value="predictive">Predictive (model)</option>
+      </select>
 
-      <button id="start-button">Start</button>
+      <label for="level-select">Starting level</label>
+      <select id="level-select">
+        <option value="1">Easy</option>
+        <option value="2" selected>Medium</option>
+        <option value="3">Hard</option>
+      </select>
+
+      <button id="start-button" class="primary">Start</button>
     </section>
 
     <!-- Screen 2: game -->
     <section id="game-screen" class="hidden">
-      <div id="info" class="small"></div>
+      <div class="topbar">
+        <span id="q-count"></span>
+        <span id="level-badge" class="badge"></span>
+      </div>
+      <div class="progress"><div id="progress-fill"></div></div>
+
       <div id="question"></div>
       <div id="options"></div>
       <div id="message"></div>
@@ -38,13 +50,16 @@
 
     <!-- Screen 3: end -->
     <section id="end-screen" class="hidden">
+      <div class="logo">🏆</div>
       <h1>Well done!</h1>
-      <p id="summary"></p>
-      <button id="download-button">Download data (CSV)</button>
-      <button id="again-button">Play again</button>
+      <div id="summary"></div>
+      <div class="buttons">
+        <button id="again-button" class="primary">Play again</button>
+        <button id="download-button" class="secondary">Download data (CSV)</button>
+      </div>
     </section>
 
-  </div>
+  </main>
 
   <script src="game.js"></script>
 </body>
