@@ -33,15 +33,9 @@ const TIME_CAP_MS = 15000;                       // response time capped, scaled
 
 const DELAY_NEXT_MS = 1200;                      // pause before the next question
 
-// The mode is hidden from players. It comes from the link, e.g.
-//   index.html?mode=rule        (also: static, predictive)
-// With no valid mode in the link, one of the three is picked at random.
-const MODES = ["static", "rule", "predictive"];
-
+// The mode is chosen on the start screen: "static", "rule" or "predictive".
 function getMode() {
-  const fromLink = new URLSearchParams(window.location.search).get("mode");
-  if (MODES.includes(fromLink)) return fromLink;
-  return MODES[Math.floor(Math.random() * MODES.length)];
+  return el("mode-select").value;
 }
 
 
@@ -203,8 +197,10 @@ function showNextQuestion() {
   state.attempts = 0;
   state.startTime = performance.now();
 
-  el("info").textContent =
-    `Question ${state.questionIndex + 1} / ${N_QUESTIONS}   |   Level: ${LEVEL_NAMES[state.level]}`;
+  el("q-count").textContent = `Question ${state.questionIndex + 1} / ${N_QUESTIONS}`;
+  el("level-badge").textContent = LEVEL_NAMES[state.level];
+  el("level-badge").className = `badge level-${state.level}`;
+  el("progress-fill").style.width = `${(state.questionIndex / N_QUESTIONS) * 100}%`;
   el("question").textContent = `${state.question.text} = ?`;
   el("message").textContent = "";
 
@@ -270,7 +266,7 @@ function endGame() {
   el("end-screen").classList.remove("hidden");
 
   const correct = log.filter(row => row.correct_first_try === 1).length;
-  el("summary").textContent = `You got ${correct} of ${N_QUESTIONS} right on the first try!`;
+  el("summary").textContent = `Your mark: ${correct} / ${N_QUESTIONS}`;
 
   // Backup copy in the browser, in case the CSV download fails
   try {
