@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Math Adventure</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="card">
+
+    <!-- Screen 1: start -->
+    <section id="start-screen">
+      <h1>Math Adventure</h1>
+
+      <label>Player ID:<br>
+        <input id="player-id" placeholder="e.g. P01">
+      </label>
+
+      <label>Mode:<br>
+        <select id="mode-select">
+          <option value="static">Static (fixed level)</option>
+          <option value="rule">Rule-based</option>
+          <option value="predictive">Predictive (model)</option>
+        </select>
+      </label>
+
+      <label>Starting level:<br>
+        <select id="level-select">
+          <option value="1">Easy</option>
+          <option value="2" selected>Medium</option>
+          <option value="3">Hard</option>
+        </select>
+      </label>
+
+      <button id="start-button">Start</button>
+    </section>
+
+    <!-- Screen 2: game -->
+    <section id="game-screen" class="hidden">
+      <div id="info" class="small"></div>
+      <div id="question"></div>
+      <div id="options"></div>
+      <div id="message"></div>
+    </section>
+
+    <!-- Screen 3: end -->
+    <section id="end-screen" class="hidden">
+      <h1>Well done!</h1>
+      <p id="summary"></p>
+      <button id="download-button">Download data (CSV)</button>
+      <button id="again-button">Play again</button>
+    </section>
+
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
