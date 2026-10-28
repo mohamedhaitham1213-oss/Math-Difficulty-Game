@@ -33,6 +33,8 @@ const TIME_CAP_MS = 15000;                       // response time capped, scaled
 
 const DELAY_NEXT_MS = 1200;                      // pause before the next question
 
+const el = id => document.getElementById(id);
+
 // The mode is chosen on the start screen: "static", "rule" or "predictive".
 function getMode() {
   return el("mode-select").value;
@@ -170,11 +172,10 @@ function chooseNextLevel(state, features) {
 let state = {};
 let log = [];                                    // one row per question
 
-const el = id => document.getElementById(id);
-
 function startGame() {
   state = {
-    playerId: el("player-id").value.trim() || "anon",
+    playerName: el("player-id").value.trim() || "Player",           // shown on screen only
+    playerId: "P" + Math.random().toString(36).slice(2, 8),         // anonymous, goes in the CSV
     mode: getMode(),
     level: parseInt(el("level-select").value, 10),
     sessionId: "S" + Date.now(),
@@ -197,7 +198,7 @@ function showNextQuestion() {
   state.attempts = 0;
   state.startTime = performance.now();
 
-  el("q-count").textContent = `Question ${state.questionIndex + 1} / ${N_QUESTIONS}`;
+  el("q-count").textContent = `${state.playerName} · Question ${state.questionIndex + 1} / ${N_QUESTIONS}`;
   el("level-badge").textContent = LEVEL_NAMES[state.level];
   el("level-badge").className = `badge level-${state.level}`;
   el("progress-fill").style.width = `${(state.questionIndex / N_QUESTIONS) * 100}%`;
@@ -266,7 +267,7 @@ function endGame() {
   el("end-screen").classList.remove("hidden");
 
   const correct = log.filter(row => row.correct_first_try === 1).length;
-  el("summary").textContent = `Your mark: ${correct} / ${N_QUESTIONS}`;
+  el("summary").textContent = `Well done, ${state.playerName}! Your mark: ${correct} / ${N_QUESTIONS}`;
 
   // Backup copy in the browser, in case the CSV download fails
   try {
