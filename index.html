@@ -4,55 +4,100 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Math Adventure</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- floating math symbols and confetti layers (filled by game.js) -->
+  <div id="bg" aria-hidden="true"></div>
+  <div id="fx" aria-hidden="true"></div>
+
   <main class="card">
+
+    <!-- Mascot (shared by all screens) -->
+    <div class="mascot-row">
+      <div id="mascot" aria-hidden="true">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <line x1="60" y1="26" x2="60" y2="12" stroke="#2f55c9" stroke-width="5" stroke-linecap="round"/>
+          <circle class="antenna" cx="60" cy="10" r="7" fill="#ffd23f" stroke="#e0ac00" stroke-width="3"/>
+          <rect x="8" y="54" width="14" height="28" rx="7" fill="#ff5d8f"/>
+          <rect x="98" y="54" width="14" height="28" rx="7" fill="#ff5d8f"/>
+          <rect x="16" y="26" width="88" height="82" rx="32" fill="#4d7cff" stroke="#2f55c9" stroke-width="4"/>
+          <rect x="28" y="38" width="64" height="56" rx="24" fill="#eef3ff"/>
+          <text x="60" y="48" text-anchor="middle" font-size="10" font-weight="700" fill="#4d7cff" font-family="Arial, sans-serif">+ − ×</text>
+          <g class="eye">
+            <ellipse cx="46" cy="62" rx="9" ry="11" fill="#fff" stroke="#2b2d5b" stroke-width="3"/>
+            <circle cx="48" cy="64" r="5" fill="#2b2d5b"/>
+            <circle cx="50" cy="61" r="1.8" fill="#fff"/>
+          </g>
+          <g class="eye">
+            <ellipse cx="74" cy="62" rx="9" ry="11" fill="#fff" stroke="#2b2d5b" stroke-width="3"/>
+            <circle cx="76" cy="64" r="5" fill="#2b2d5b"/>
+            <circle cx="78" cy="61" r="1.8" fill="#fff"/>
+          </g>
+          <circle cx="37" cy="80" r="5" fill="#ffb3c7"/>
+          <circle cx="83" cy="80" r="5" fill="#ffb3c7"/>
+          <path class="m-smile" d="M49 80 Q60 92 71 80" fill="none" stroke="#2b2d5b" stroke-width="4" stroke-linecap="round"/>
+          <path class="m-big" d="M47 78 Q60 100 73 78 Z" fill="#2b2d5b" stroke="#2b2d5b" stroke-width="3" stroke-linejoin="round"/>
+          <path class="m-oops" d="M50 89 Q60 79 70 89" fill="none" stroke="#2b2d5b" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div id="bubble" class="bubble">Hi! I'm Numo. Let's do some math!</div>
+    </div>
 
     <!-- Screen 1: start -->
     <section id="start-screen">
-      <div class="logo">🚀</div>
-      <h1>Math Adventure</h1>
+      <h1 class="title rainbow">Math Adventure</h1>
       <p class="subtitle">Answer the questions and collect your stars!</p>
 
-      <label for="player-id">Your Name</label>
+      <label for="player-id">What's your name?</label>
       <input id="player-id" placeholder="Your name or nickname" maxlength="15" autocomplete="off">
 
-      <label>Mode</label>
+      <label>Game mode</label>
       <input type="hidden" id="mode-select" value="">
-      <button id="select-mode-button" type="button" class="secondary">Select mode</button>
+      <button id="select-mode-button" type="button" class="btn btn-purple wide">🎮 Select mode</button>
 
-      <label for="level-select">Starting level</label>
-      <select id="level-select">
-        <option value="1">Easy</option>
-        <option value="2" selected>Medium</option>
-        <option value="3">Hard</option>
-      </select>
+      <label>Starting level</label>
+      <input type="hidden" id="level-select" value="2">
+      <div class="level-chips">
+        <button type="button" class="chip chip-1" data-level="1">🌱 Easy</button>
+        <button type="button" class="chip chip-2 selected" data-level="2">⭐ Medium</button>
+        <button type="button" class="chip chip-3" data-level="3">🔥 Hard</button>
+      </div>
 
-      <button id="start-button" class="primary">Start</button>
+      <button id="start-button" type="button" class="btn btn-green big">▶ Start</button>
     </section>
 
     <!-- Screen 2: game -->
     <section id="game-screen" class="hidden">
       <div class="topbar">
-        <span id="q-count"></span>
+        <span id="q-count" class="pill"></span>
+        <span id="stars" class="pill pill-star">⭐ 0</span>
         <span id="level-badge" class="badge"></span>
       </div>
-      <div class="progress"><div id="progress-fill"></div></div>
 
-      <div id="question"></div>
+      <div class="track">
+        <div id="progress-fill"></div>
+        <span id="rocket" class="rocket"><span>🚀</span></span>
+        <span class="goal">🪐</span>
+      </div>
+
+      <div id="question-card"><div id="question"></div></div>
       <div id="options"></div>
       <div id="message"></div>
     </section>
 
     <!-- Screen 3: end -->
     <section id="end-screen" class="hidden">
-      <div class="logo">🏆</div>
-      <h1>Well done!</h1>
+      <div class="trophy">🏆</div>
+      <h1 class="title rainbow">Well done!</h1>
+      <div id="stars-row"></div>
       <div id="summary"></div>
       <div class="buttons">
-        <button id="again-button" class="primary">Play again</button>
-        <button id="download-button" class="secondary">Download data (CSV)</button>
+        <button id="again-button" type="button" class="btn btn-green">🔄 Play again</button>
+        <button id="download-button" type="button" class="btn btn-blue">📥 Download data (CSV)</button>
       </div>
     </section>
 
@@ -61,11 +106,12 @@
   <!-- Mode selection overlay -->
   <div id="mode-overlay" class="overlay hidden">
     <div class="mode-panel">
-      <h2>Choose a mode</h2>
+      <h2>Choose your game mode 🎮</h2>
       <div class="mode-cards">
 
         <div class="mode-wrap">
           <button type="button" class="mode-card" data-mode="static">
+            <span class="mode-icon">🧊</span>
             <span class="mode-title">Static</span>
             <span class="mode-info">The difficulty never changes. You stay on the level you started with for all 12 questions.</span>
           </button>
@@ -73,6 +119,7 @@
 
         <div class="mode-wrap">
           <button type="button" class="mode-card" data-mode="rule">
+            <span class="mode-icon">📏</span>
             <span class="mode-title">Rule-based</span>
             <span class="mode-info">Simple rules: 3 correct answers in a row makes the game harder, and 2 wrong answers in a row makes it easier.</span>
           </button>
@@ -80,6 +127,7 @@
 
         <div class="mode-wrap">
           <button type="button" class="mode-card" data-mode="predictive">
+            <span class="mode-icon">🔮</span>
             <span class="mode-title">Predictive</span>
             <span class="mode-info">A small model looks at your last 3 answers (accuracy, speed and retries) and predicts the best next level.</span>
           </button>
@@ -87,7 +135,7 @@
         </div>
 
       </div>
-      <button type="button" id="mode-close" class="secondary">Cancel</button>
+      <button type="button" id="mode-close" class="btn btn-grey">Cancel</button>
     </div>
   </div>
 
@@ -96,7 +144,7 @@
     <div class="mode-panel info-panel">
       <h2>How does Predictive mode think? 🤔</h2>
       <div id="info-content"></div>
-      <button type="button" id="info-close" class="primary">Got it!</button>
+      <button type="button" id="info-close" class="btn btn-blue">Got it!</button>
     </div>
   </div>
 
