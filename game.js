@@ -5,9 +5,10 @@
      2. Question generator
      3. Features (accuracy, response time, retry rate)
      4. The three difficulty engines (static, rule-based, predictive)
-     5. Game flow
-     6. Data logging and CSV export
-     7. Start-up, mode selection and info panel
+     5. Visual effects (mascot, confetti, background - no effect on the experiment)
+     6. Game flow
+     7. Data logging and CSV export
+     8. Start-up, mode selection and info panel
    ========================================================== */
 
 
@@ -18,6 +19,7 @@ const WINDOW = 3;                                // features use the last 3 answ
 const MIN_LEVEL = 1;
 const MAX_LEVEL = 3;
 const LEVEL_NAMES = { 1: "Easy", 2: "Medium", 3: "Hard" };
+const LEVEL_ICONS = { 1: "🌱", 2: "⭐", 3: "🔥" };
 
 // Rule-based engine
 const RULE_STREAK_UP = 3;                        // correct in a row -> harder
@@ -175,7 +177,152 @@ function chooseNextLevel(state, features) {
 }
 
 
-/* ---------- 5. GAME FLOW ---------- */
+/* ---------- 5. VISUAL EFFECTS ----------
+   Everything here is decoration only. It never touches the
+   questions, the engines, the features or the logged data. */
+
+const PRAISE = ["Super!", "Awesome!", "You got it!", "Brilliant!", "Great job!", "Wow, nice one!"];
+const RETRY_LINES = ["Oops! Try once more.", "Almost! Give it another go.", "Not quite. You can do it!"];
+const MISS_LINES = ["That one was tricky! On to the next.", "Good try! Let's keep going."];
+const NEW_Q_LINES = ["What's the answer?", "You can do it!", "Let's see...", "Here's a new one!"];
+const CONFETTI_COLORS = ["#ff5d8f", "#ffd23f", "#2ec27e", "#4d7cff", "#9b5de5", "#ff9f1c"];
+const BG_SYMBOLS = ["+", "−", "×", "÷", "=", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "%", "π", "∞"];
+
+function pick(list) {
+  return list[randomInt(0, list.length - 1)];
+}
+
+// Restart a CSS animation that is driven by a class.
+function restart(node, cls) {
+  node.classList.remove(cls);
+  void node.offsetWidth;                         // forces the browser to notice
+  node.classList.add(cls);
+}
+
+// Mascot mood: "happy" or "oops" (goes back to normal by itself)
+let moodTimer = null;
+function setMood(mood) {
+  const mascot = el("mascot");
+  mascot.classList.remove("mood-happy", "mood-oops");
+  void mascot.offsetWidth;
+  mascot.classList.add("mood-" + mood);
+  clearTimeout(moodTimer);
+  moodTimer = setTimeout(() => mascot.classList.remove("mood-happy", "mood-oops"), 900);
+}
+
+// Mascot speech bubble
+function say(text, mood) {
+  el("bubble").textContent = text;
+  restart(el("bubble"), "pop");
+  if (mood) setMood(mood);
+}
+
+// Feedback line under the answers; kind is "good", "bad" or "" (clear)
+function showMessage(text, kind) {
+  const m = el("message");
+  m.className = "";
+  void m.offsetWidth;
+  m.textContent = text;
+  if (kind) m.classList.add("msg-" + kind);
+}
+
+function confetti(x, y, count) {
+  const layer = el("fx");
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement("i");
+    piece.style.left = x + "px";
+    piece.style.top = y + "px";
+    piece.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    piece.style.setProperty("--dx", randomInt(-170, 170) + "px");
+    piece.style.setProperty("--up", -randomInt(60, 180) + "px");
+    piece.style.setProperty("--fall", randomInt(60, 240) + "px");
+    piece.style.setProperty("--rot", randomInt(-540, 540) + "deg");
+    layer.appendChild(piece);
+    setTimeout(() => piece.remove(), 1300);
+  }
+}
+
+function celebrate(button, firstTry) {
+  const r = button.getBoundingClientRect();
+  confetti(r.left + r.width / 2, r.top + r.height / 2, firstTry ? 30 : 14);
+  say(pick(PRAISE), "happy");
+}
+
+// After a missed question, light up the right answer
+function revealAnswer() {
+  document.querySelectorAll("#options button").forEach(b => {
+    if (Number(b.textContent) === state.question.answer) b.classList.add("correct", "reveal");
+  });
+}
+
+// Floating math symbols in the background
+function buildBackground() {
+  const bg = el("bg");
+  const colors = ["#ff5d8f", "#ffd23f", "#2ec27e", "#4d7cff", "#9b5de5", "#ff9f1c"];
+  for (let i = 0; i < 22; i++) {
+    const s = document.createElement("span");
+    s.textContent = BG_SYMBOLS[i % BG_SYMBOLS.length];
+    s.style.left = randomInt(0, 96) + "%";
+    s.style.fontSize = randomInt(28, 70) + "px";
+    s.style.color = colors[randomInt(0, colors.length - 1)];
+    s.style.animationDuration = randomInt(16, 32) + "s";
+    s.style.animationDelay = "-" + randomInt(0, 32) + "s";
+    bg.appendChild(s);
+  }
+}
+
+// Turns every ".rainbow" title into bouncing coloured letters
+function rainbowTitles() {
+  document.querySelectorAll(".rainbow").forEach(node => {
+    const text = node.textContent;
+    node.setAttribute("aria-label", text);
+    node.textContent = "";
+    let n = 0;
+    text.split(" ").forEach((word, w, words) => {
+      const wordSpan = document.createElement("span");
+      wordSpan.className = "word";
+      wordSpan.setAttribute("aria-hidden", "true");
+      [...word].forEach(ch => {
+        const s = document.createElement("span");
+        s.className = "letter";
+        s.textContent = ch;
+        s.style.setProperty("--i", n);
+        s.style.setProperty("--lc", CONFETTI_COLORS[n % CONFETTI_COLORS.length]);
+        wordSpan.appendChild(s);
+        n++;
+      });
+      node.appendChild(wordSpan);
+      if (w < words.length - 1) node.appendChild(document.createTextNode(" "));
+    });
+  });
+}
+
+// "<7> + <5> = ?" with coloured operators (text comes from our own generator)
+function equationHtml(text) {
+  return text.replace(/([+−×])/g, '<span class="op">$1</span>') +
+         ' <span class="op">=</span> <span class="qmark">?</span>';
+}
+
+function buildStarsRow(correct) {
+  const row = el("stars-row");
+  row.innerHTML = "";
+  for (let i = 0; i < N_QUESTIONS; i++) {
+    const s = document.createElement("span");
+    s.className = "star" + (i < correct ? "" : " off");
+    s.textContent = "⭐";
+    s.style.setProperty("--i", i);
+    row.appendChild(s);
+  }
+}
+
+function endLine(correct, name) {
+  if (correct >= 10) return `Math superstar, ${name}!`;
+  if (correct >= 6) return `Great work, ${name}!`;
+  return `Nice try, ${name}! Play again for more stars!`;
+}
+
+
+/* ---------- 6. GAME FLOW ---------- */
 
 let state = {};
 let log = [];                                    // one row per question
@@ -196,12 +343,16 @@ function startGame() {
     questionIndex: 0,
     history: [],                                 // { correct, timeMs, retries }
     streak: 0,                                   // consecutive first-try correct
-    wrongStreak: 0                               // consecutive not first-try correct
+    wrongStreak: 0,                              // consecutive not first-try correct
+    stars: 0,                                    // first-try correct answers (display only)
+    shownLevel: null                             // last level shown on the badge (display only)
   };
   log = [];
 
+  el("stars").textContent = "⭐ 0";
   el("start-screen").classList.add("hidden");
   el("game-screen").classList.remove("hidden");
+  say(`Let's go, ${state.playerName}!`, "happy");
   showNextQuestion();
 }
 
@@ -212,19 +363,27 @@ function showNextQuestion() {
   state.attempts = 0;
   state.startTime = performance.now();
 
-  el("q-count").textContent = `${state.playerName} · Question ${state.questionIndex + 1} / ${N_QUESTIONS}`;
-  el("level-badge").textContent = LEVEL_NAMES[state.level];
+  const pct = (state.questionIndex / N_QUESTIONS) * 100;
+  el("q-count").textContent = `Question ${state.questionIndex + 1} / ${N_QUESTIONS}`;
+  el("level-badge").textContent = `${LEVEL_ICONS[state.level]} ${LEVEL_NAMES[state.level]}`;
   el("level-badge").className = `badge level-${state.level}`;
-  el("progress-fill").style.width = `${(state.questionIndex / N_QUESTIONS) * 100}%`;
-  el("question").textContent = `${state.question.text} = ?`;
-  el("message").textContent = "";
+  if (state.shownLevel !== null && state.shownLevel !== state.level) restart(el("level-badge"), "pop");
+  state.shownLevel = state.level;
+
+  el("progress-fill").style.width = `${pct}%`;
+  el("rocket").style.left = `${pct}%`;
+  el("question").innerHTML = equationHtml(state.question.text);
+  restart(el("question-card"), "slide-in");
+  showMessage("", "");
+  if (state.questionIndex > 0) say(pick(NEW_Q_LINES));
 
   const box = el("options");
   box.innerHTML = "";
-  state.question.options.forEach(value => {
+  state.question.options.forEach((value, i) => {
     const button = document.createElement("button");
     button.className = "option";
     button.textContent = value;
+    button.style.setProperty("--n", i);
     button.addEventListener("click", () => handleAnswer(button, value));
     box.appendChild(button);
   });
@@ -235,16 +394,20 @@ function handleAnswer(button, value) {
 
   if (value === state.question.answer) {
     button.classList.add("correct");
-    el("message").textContent = "Correct! ⭐";
+    showMessage("Correct! ⭐", "good");
     finishQuestion(true);
+    celebrate(button, state.attempts === 1);
   } else if (state.attempts < 2) {               // one retry allowed
     button.classList.add("wrong");
     button.disabled = true;
-    el("message").textContent = "Try again!";
+    showMessage("Try again!", "bad");
+    say(pick(RETRY_LINES), "oops");
   } else {
     button.classList.add("wrong");
-    el("message").textContent = `The answer was ${state.question.answer}`;
+    showMessage(`The answer was ${state.question.answer}`, "bad");
     finishQuestion(false);
+    revealAnswer();
+    say(pick(MISS_LINES), "oops");
   }
 }
 
@@ -259,6 +422,13 @@ function finishQuestion(finalCorrect) {
   state.history.push({ correct: firstTryCorrect, timeMs, retries });
   if (firstTryCorrect) { state.streak++; state.wrongStreak = 0; }
   else                 { state.streak = 0; state.wrongStreak++; }
+
+  // Star counter (display only)
+  if (firstTryCorrect) {
+    state.stars++;
+    el("stars").textContent = `⭐ ${state.stars}`;
+    restart(el("stars"), "pop");
+  }
 
   // Let the selected engine choose the next level
   const oldLevel = state.level;
@@ -282,6 +452,9 @@ function endGame() {
 
   const correct = log.filter(row => row.correct_first_try === 1).length;
   el("summary").textContent = `${state.playerName}, your mark: ${correct} / ${N_QUESTIONS}`;
+  buildStarsRow(correct);
+  say(endLine(correct, state.playerName), "happy");
+  confetti(window.innerWidth / 2, window.innerHeight / 3, 70);
 
   // Backup copy in the browser, in case the CSV download fails
   try {
@@ -290,7 +463,7 @@ function endGame() {
 }
 
 
-/* ---------- 6. DATA LOGGING AND CSV EXPORT ---------- */
+/* ---------- 7. DATA LOGGING AND CSV EXPORT ---------- */
 
 function logQuestion(level, firstTryCorrect, finalCorrect, timeMs, features, decision) {
   log.push({
@@ -329,9 +502,10 @@ function downloadCSV() {
 }
 
 
-/* ---------- 7. START-UP, MODE SELECTION AND INFO PANEL ---------- */
+/* ---------- 8. START-UP, MODE SELECTION AND INFO PANEL ---------- */
 
 const MODE_LABELS = { static: "Static", rule: "Rule-based", predictive: "Predictive" };
+const MODE_ICONS = { static: "🧊", rule: "📏", predictive: "🔮" };
 
 // Builds the child-friendly explanation of the Predictive mode.
 // All numbers come from MODEL, P_UP, P_DOWN, WINDOW and TIME_CAP_MS above.
@@ -418,9 +592,21 @@ function closeInfo() {
   el("info-overlay").classList.add("hidden");
 }
 
+buildBackground();
+rainbowTitles();
+
 el("start-button").addEventListener("click", startGame);
 el("download-button").addEventListener("click", downloadCSV);
 el("again-button").addEventListener("click", () => location.reload());
+
+// Starting level chips
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".chip").forEach(c => c.classList.remove("selected"));
+    chip.classList.add("selected");
+    el("level-select").value = chip.dataset.level;
+  });
+});
 
 // Mode selection overlay
 el("select-mode-button").addEventListener("click", () => {
@@ -429,9 +615,11 @@ el("select-mode-button").addEventListener("click", () => {
 
 document.querySelectorAll(".mode-card").forEach(card => {
   card.addEventListener("click", () => {
-    el("mode-select").value = card.dataset.mode;
-    el("select-mode-button").textContent = "Mode: " + MODE_LABELS[card.dataset.mode];
+    const mode = card.dataset.mode;
+    el("mode-select").value = mode;
+    el("select-mode-button").textContent = `${MODE_ICONS[mode]} Mode: ${MODE_LABELS[mode]}`;
     el("mode-overlay").classList.add("hidden");
+    say(`${MODE_LABELS[mode]} mode. Good choice!`, "happy");
   });
 });
 
