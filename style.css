@@ -4,7 +4,9 @@
    3. Card and mascot      4. Start and end screens
    5. Game screen          6. Buttons
    7. Mode overlay         8. Info panel
-   9. Animations          10. Small screens and reduced motion
+   9. Tools, admin, quit  10. Animations
+  11. Right-to-left (Arabic)
+  12. Small screens and reduced motion
    ========================================================== */
 
 /* ---------- 1. COLOURS AND BASICS ---------- */
@@ -31,7 +33,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  font-family: "Fredoka", "Trebuchet MS", "Comic Sans MS", Arial, sans-serif;
+  font-family: "Fredoka", "Cairo", "Trebuchet MS", "Comic Sans MS", Arial, sans-serif;
   color: var(--ink);
   text-align: center;
   background: linear-gradient(160deg, var(--sky1) 0%, var(--sky2) 100%);
@@ -40,6 +42,12 @@ body {
 
 button { font-family: inherit; cursor: pointer; }
 .hidden { display: none !important; }
+
+/* keyboard users can always see where they are */
+button:focus-visible, input:focus-visible {
+  outline: 4px solid var(--yellow-d);
+  outline-offset: 3px;
+}
 
 
 /* ---------- 2. BACKGROUND AND EFFECTS ---------- */
@@ -105,7 +113,7 @@ button { font-family: inherit; cursor: pointer; }
   align-items: center;
   gap: 14px;
   margin-bottom: 6px;
-  text-align: left;
+  text-align: start;
 }
 
 #mascot {
@@ -163,7 +171,7 @@ button { font-family: inherit; cursor: pointer; }
 .title {
   margin: 10px 0 0;
   font-size: 42px;
-  line-height: 1.1;
+  line-height: 1.2;
   letter-spacing: 1px;
 }
 .title .word { display: inline-block; white-space: nowrap; }
@@ -180,14 +188,15 @@ button { font-family: inherit; cursor: pointer; }
 label {
   display: block;
   margin: 16px 0 6px;
-  text-align: left;
+  text-align: start;
   font-size: 17px;
   font-weight: 600;
   color: var(--muted);
 }
 
-input[type="text"], #player-id {
+#player-id {
   width: 100%;
+  min-height: 52px;
   padding: 12px 16px;
   font: inherit;
   font-size: 20px;
@@ -208,6 +217,7 @@ input[type="text"], #player-id {
 .level-chips { display: flex; gap: 10px; }
 .chip {
   flex: 1;
+  min-height: 56px;
   padding: 12px 6px;
   font: inherit;
   font-size: 17px;
@@ -271,6 +281,7 @@ input[type="text"], #player-id {
 /* ---------- 5. GAME SCREEN ---------- */
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
@@ -300,8 +311,10 @@ input[type="text"], #player-id {
 .badge.level-2 { background: var(--orange); }
 .badge.level-3 { background: var(--red); }
 
+/* the rocket always flies left to right, even in Arabic */
 .track {
   position: relative;
+  direction: ltr;
   height: 18px;
   margin: 8px 20px 20px;
   background: rgba(77, 124, 255, 0.18);
@@ -333,16 +346,19 @@ input[type="text"], #player-id {
   transform: translateY(-50%);
 }
 
-/* the question is written on a chalkboard */
+/* the question is written on a chalkboard (numbers always read left to right) */
 #question-card {
+  position: relative;
   margin: 8px 0 20px;
-  padding: 22px 10px;
+  padding: 46px 10px 22px;                       /* room at the top for the read-aloud button */
   background: #2f6b57;
   border: 8px solid #b07a43;
   border-radius: 20px;
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35), 0 6px 0 #8a5a2b;
 }
 #question {
+  direction: ltr;
+  unicode-bidi: isolate;
   font-size: 52px;
   font-weight: 700;
   letter-spacing: 2px;
@@ -357,7 +373,29 @@ input[type="text"], #player-id {
 }
 .slide-in { animation: slideIn 0.35s ease-out; }
 
-#options { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.speak-btn {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+}
+.speak-btn:hover { background: rgba(255, 255, 255, 0.32); }
+
+#options {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
 
 #message {
   min-height: 44px;
@@ -388,13 +426,16 @@ input[type="text"], #player-id {
   box-shadow: 0 1px 0 var(--cd, var(--blue-d)), 0 3px 6px rgba(43, 45, 91, 0.2);
 }
 
-.btn { padding: 14px 22px; font-size: 21px; border-radius: 18px; }
+.btn { min-height: 52px; padding: 14px 22px; font-size: 21px; border-radius: 18px; }
+.btn.small { min-height: 44px; padding: 10px 16px; font-size: 16px; }
 .btn-green  { --c: var(--green);  --cd: var(--green-d); }
 .btn-blue   { --c: var(--blue);   --cd: var(--blue-d); }
 .btn-purple { --c: var(--purple); --cd: var(--purple-d); }
 .btn-grey   { --c: #8d93b8;       --cd: #6c7299; }
 
 .option {
+  position: relative;
+  min-height: 84px;
   padding: 20px 10px;
   font-size: 36px;
   font-weight: 700;
@@ -411,6 +452,33 @@ input[type="text"], #player-id {
 .option.correct { --c: var(--green); --cd: var(--green-d); animation: jump 0.6s ease; }
 .option.wrong   { --c: var(--red);   --cd: var(--red-d);   animation: shake 0.5s ease; }
 .option.reveal  { animation: jump 0.6s ease 0.2s backwards; }
+
+/* small number in the corner = the keyboard key (1-4); hidden on touch screens */
+.option .key {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+  line-height: 24px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+}
+@media (hover: none) { .option .key { display: none; } }
+
+/* tick and cross, so right and wrong do not depend on colour alone */
+.option.correct::after, .option.wrong::after {
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  font-size: 28px;
+  line-height: 1;
+  color: #fff;
+}
+.option.correct::after { content: "✓"; }
+.option.wrong::after   { content: "✗"; }
 
 
 /* ---------- 7. MODE OVERLAY ---------- */
@@ -486,10 +554,10 @@ input[type="text"], #player-id {
 .info-btn {
   position: absolute;
   top: 10px;
-  right: 10px;
+  inset-inline-end: 10px;
   z-index: 2;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -497,7 +565,7 @@ input[type="text"], #player-id {
   font-family: Georgia, "Times New Roman", serif;
   font-style: italic;
   font-weight: 700;
-  font-size: 19px;
+  font-size: 21px;
   line-height: 1;
   color: var(--purple);
   background: #fff;
@@ -511,14 +579,18 @@ input[type="text"], #player-id {
 /* ---------- 8. INFO PANEL ---------- */
 #info-overlay { z-index: 110; }
 
-.info-panel { max-width: 680px; text-align: left; }
+.info-panel { max-width: 680px; text-align: start; }
 .info-panel h2 { text-align: center; }
 .info-panel h3 { margin: 20px 0 6px; font-size: 21px; color: var(--blue-d); }
-.info-panel p, .info-panel li { margin: 6px 0; font-size: 17px; line-height: 1.5; }
-.info-panel ul { margin: 6px 0; padding-left: 20px; }
+.info-panel p, .info-panel li { margin: 6px 0; font-size: 17px; line-height: 1.6; }
+.info-panel ul { margin: 6px 0; padding: 0; padding-inline-start: 22px; }
 .info-panel .btn { display: block; margin: 24px auto 0; }
 
+.formula .term { white-space: nowrap; }
 .formula {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: left;
   margin: 8px 0;
   padding: 12px 14px;
   font-family: "Courier New", monospace;
@@ -534,14 +606,57 @@ input[type="text"], #player-id {
   margin: 8px 0;
   padding: 10px 14px;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.6;
   background: #f7f9ff;
-  border-left: 6px solid var(--purple);
+  border-inline-start: 6px solid var(--purple);
   border-radius: 10px;
 }
 
 
-/* ---------- 9. ANIMATIONS ---------- */
+/* ---------- 9. TOOLS, ADMIN, QUIT ---------- */
+#tools {
+  position: fixed;
+  top: 12px;
+  inset-inline-end: 12px;
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+}
+.tool-btn {
+  min-width: 46px;
+  height: 46px;
+  padding: 0 14px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blue-d);
+  background: #fff;
+  border: 3px solid var(--blue);
+  border-radius: 999px;
+  box-shadow: 0 4px 0 var(--blue-d);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.tool-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--blue-d); }
+
+.admin-box {
+  margin: 8px 0 12px;
+  padding: 10px;
+  background: #fff8d6;
+  border: 3px dashed var(--yellow-d);
+  border-radius: 16px;
+}
+.admin-tag { margin-bottom: 8px; font-weight: 700; color: #a67c00; }
+
+/* the stop button lives in the top corner during the game */
+.tool-quit { color: var(--red-d); border-color: var(--red); box-shadow: 0 4px 0 var(--red-d); }
+.tool-quit:hover { color: #fff; background: var(--red); }
+.tool-quit:active { box-shadow: 0 1px 0 var(--red-d); }
+
+.mode-panel.small { max-width: 440px; }
+.mode-panel.small p { margin: 12px 0 0; font-size: 20px; }
+.row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 22px; }
+
+
+/* ---------- 10. ANIMATIONS ---------- */
 @keyframes cardIn { from { opacity: 0; transform: translateY(30px) scale(0.94); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes panelIn { from { opacity: 0; transform: scale(0.85) translateY(20px); } to { opacity: 1; transform: none; } }
@@ -600,7 +715,20 @@ input[type="text"], #player-id {
 }
 
 
-/* ---------- 10. SMALL SCREENS AND REDUCED MOTION ---------- */
+/* ---------- 11. RIGHT-TO-LEFT (ARABIC) ---------- */
+/* the speech-bubble tail moves to the other side */
+html[dir="rtl"] .bubble::before,
+html[dir="rtl"] .bubble::after {
+  border: 10px solid transparent;
+  border-right: 0;
+}
+html[dir="rtl"] .bubble::before { left: auto; right: -13px; border-left-color: var(--blue); }
+html[dir="rtl"] .bubble::after  { left: auto; right: -8px;  border-left-color: #fff; }
+
+html[dir="rtl"] .title { letter-spacing: 0; }
+
+
+/* ---------- 12. SMALL SCREENS AND REDUCED MOTION ---------- */
 @media (max-width: 440px) {
   .card { padding: 34px 14px 20px; }
   #mascot { width: 72px; height: 72px; }
@@ -609,6 +737,7 @@ input[type="text"], #player-id {
   #question { font-size: 40px; }
   .option { font-size: 30px; }
   .chip { font-size: 15px; }
+  .pill, .badge { font-size: 14px; padding: 4px 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
