@@ -7,7 +7,7 @@
      4. The three difficulty engines (static, rule-based, predictive)
      5. Game flow
      6. Data logging and CSV export
-     7. Start-up
+     7. Start-up, mode selection and info panel
    ========================================================== */
 
 
@@ -24,8 +24,10 @@ const RULE_STREAK_UP = 3;                        // correct in a row -> harder
 const RULE_WRONG_DOWN = 2;                       // wrong in a row -> easier
 
 // Predictive engine: logistic regression
-//   p = sigmoid(b + w_acc*accuracy + w_time*time + w_retry*retry)
+//   z = b + w_acc*accuracy + w_time*time + w_retry*retry
+//   p = 1 / (1 + e^(-z))
 // PLACEHOLDER weights - replace with weights trained in Python.
+// The info panel in the mode screen reads these values automatically.
 const MODEL = { b: -0.5, w_acc: 4.0, w_time: -1.5, w_retry: -3.0 };
 const P_UP = 0.70;                               // p above this -> harder
 const P_DOWN = 0.35;                             // p below this -> easier
@@ -35,7 +37,7 @@ const DELAY_NEXT_MS = 1200;                      // pause before the next questi
 
 const el = id => document.getElementById(id);
 
-// The mode is chosen on the start screen: "static", "rule" or "predictive".
+// The mode is chosen in the "Select mode" overlay: "static", "rule" or "predictive".
 function getMode() {
   return el("mode-select").value;
 }
@@ -141,13 +143,19 @@ function ruleEngine(state) {
   return { level: state.level, p: null };
 }
 
-// Engine 3: predictive - logistic regression gives P(ready for harder).
-function predictiveEngine(state, features) {
+// The logistic regression itself. Used by the engine AND by the info panel,
+// so the explanation always matches what the game really does.
+function modelScore(features) {
   const z = MODEL.b
           + MODEL.w_acc * features.accuracy
           + MODEL.w_time * features.time
           + MODEL.w_retry * features.retry;
-  const p = 1 / (1 + Math.exp(-z));
+  return { z, p: 1 / (1 + Math.exp(-z)) };
+}
+
+// Engine 3: predictive - logistic regression gives P(ready for harder).
+function predictiveEngine(state, features) {
+  const { p } = modelScore(features);
 
   // Wait until there are WINDOW answers at the current level, so one lucky
   // (or unlucky) answer cannot change the level on its own.
@@ -173,6 +181,12 @@ let state = {};
 let log = [];                                    // one row per question
 
 function startGame() {
+  // No mode chosen yet: open the mode overlay instead of starting
+  if (!getMode()) {
+    el("mode-overlay").classList.remove("hidden");
+    return;
+  }
+
   state = {
     playerName: el("player-id").value.trim() || "Player",           // shown on screen only
     playerId: "P" + Math.random().toString(36).slice(2, 8),         // anonymous, goes in the CSV
@@ -267,7 +281,7 @@ function endGame() {
   el("end-screen").classList.remove("hidden");
 
   const correct = log.filter(row => row.correct_first_try === 1).length;
-  el("summary").textContent = `Well done, ${state.playerName}! Your mark: ${correct} / ${N_QUESTIONS}`;
+  el("summary").textContent = `${state.playerName}, your mark: ${correct} / ${N_QUESTIONS}`;
 
   // Backup copy in the browser, in case the CSV download fails
   try {
@@ -315,8 +329,126 @@ function downloadCSV() {
 }
 
 
-/* ---------- 7. START-UP ---------- */
+/* ---------- 7. START-UP, MODE SELECTION AND INFO PANEL ---------- */
+
+const MODE_LABELS = { static: "Static", rule: "Rule-based", predictive: "Predictive" };
+
+// Builds the child-friendly explanation of the Predictive mode.
+// All numbers come from MODEL, P_UP, P_DOWN, WINDOW and TIME_CAP_MS above.
+function buildInfo() {
+  const MINUS = "−";
+  const sign = w => (w < 0 ? MINUS : "+");
+  const abs = w => Math.abs(w).toFixed(1);
+  const effect = w => (w < 0 ? "takes points away" : "adds points");
+  const pct = x => Math.round(x * 100) + "%";
+  const capSec = TIME_CAP_MS / 1000;
+
+  const formula =
+    `z = ${MODEL.b < 0 ? MINUS : ""}${abs(MODEL.b)} ` +
+    `${sign(MODEL.w_acc)} ${abs(MODEL.w_acc)} × accuracy ` +
+    `${sign(MODEL.w_time)} ${abs(MODEL.w_time)} × speed ` +
+    `${sign(MODEL.w_retry)} ${abs(MODEL.w_retry)} × retries`;
+
+  // Worked examples (written for WINDOW = 3), calculated with the real model
+  const seconds = s => Math.min(s * 1000, TIME_CAP_MS) / TIME_CAP_MS;
+  const examples = [
+    { icon: "🌟", text: "3 of 3 right the first time, about 5 seconds each, no retries",
+      f: { accuracy: 3 / 3, time: seconds(5), retry: 0 } },
+    { icon: "🙂", text: "2 of 3 right the first time, one retry, about 7.5 seconds each",
+      f: { accuracy: 2 / 3, time: seconds(7.5), retry: 1 / 3 } },
+    { icon: "😅", text: "1 of 3 right the first time, two retries, about 12 seconds each",
+      f: { accuracy: 1 / 3, time: seconds(12), retry: 2 / 3 } }
+  ];
+
+  const exampleHtml = examples.map(ex => {
+    const { z, p } = modelScore(ex.f);
+    const outcome = p > P_UP ? "🚀 harder level"
+                  : p < P_DOWN ? "🌱 easier level"
+                  : "👍 stay on the same level";
+    return `<div class="example">${ex.icon} <b>${ex.text}</b><br>` +
+           `z = ${z.toFixed(2)} → ready-chance p = ${pct(p)} → <b>${outcome}</b></div>`;
+  }).join("");
+
+  el("info-content").innerHTML = `
+    <h3>1. It watches your last ${WINDOW} answers</h3>
+    <p>The game looks at how you did on your last ${WINDOW} questions and uses three clues.
+       It waits until you have answered ${WINDOW} questions at a level, so one lucky (or unlucky)
+       answer can never change things on its own.</p>
+
+    <h3>2. The three clues and their weights</h3>
+    <p>A <b>weight</b> tells the game how important a clue is. The bigger the number, the more that
+       clue matters. A <b>+</b> means the clue adds points, a <b>${MINUS}</b> means it takes points away.</p>
+    <ul>
+      <li>✅ <b>Right the first time</b> (accuracy): from 0 (none) to 1 (all ${WINDOW}).
+          Weight <b>${sign(MODEL.w_acc)}${abs(MODEL.w_acc)}</b> → ${effect(MODEL.w_acc)}.</li>
+      <li>⏱️ <b>Speed</b> (how long you think): from 0 (super fast) to 1 (${capSec} seconds or more).
+          Weight <b>${sign(MODEL.w_time)}${abs(MODEL.w_time)}</b> → ${effect(MODEL.w_time)}.</li>
+      <li>🔁 <b>Retries</b> (extra tries needed): the average number of retries per question.
+          Weight <b>${sign(MODEL.w_retry)}${abs(MODEL.w_retry)}</b> → ${effect(MODEL.w_retry)}.</li>
+    </ul>
+
+    <h3>3. Add it all up: the score z</h3>
+    <p>Each clue is multiplied by its weight, and everything is added to a starting number
+       (<b>${MODEL.b < 0 ? MINUS : ""}${abs(MODEL.b)}</b>, called b). The result is your score <b>z</b>:</p>
+    <div class="formula">${formula}</div>
+
+    <h3>4. Turn the score into a ready-chance</h3>
+    <p>The score z is turned into a <b>ready-chance p</b> between 0% and 100%,
+       which says how ready you are for harder questions:</p>
+    <div class="formula">p = 1 ÷ (1 + e<sup>${MINUS}z</sup>)</div>
+
+    <h3>5. The game decides</h3>
+    <ul>
+      <li>🚀 If <b>p is above ${pct(P_UP)}</b> (p &gt; ${P_UP.toFixed(2)}) → the next level is <b>harder</b>.</li>
+      <li>🌱 If <b>p is below ${pct(P_DOWN)}</b> (p &lt; ${P_DOWN.toFixed(2)}) → the next level is <b>easier</b>.</li>
+      <li>👍 In between → you <b>stay</b> on the same level.</li>
+    </ul>
+
+    <h3>6. Examples</h3>
+    ${exampleHtml}
+  `;
+}
+
+function openInfo() {
+  buildInfo();
+  el("info-overlay").classList.remove("hidden");
+}
+
+function closeInfo() {
+  el("info-overlay").classList.add("hidden");
+}
 
 el("start-button").addEventListener("click", startGame);
 el("download-button").addEventListener("click", downloadCSV);
 el("again-button").addEventListener("click", () => location.reload());
+
+// Mode selection overlay
+el("select-mode-button").addEventListener("click", () => {
+  el("mode-overlay").classList.remove("hidden");
+});
+
+document.querySelectorAll(".mode-card").forEach(card => {
+  card.addEventListener("click", () => {
+    el("mode-select").value = card.dataset.mode;
+    el("select-mode-button").textContent = "Mode: " + MODE_LABELS[card.dataset.mode];
+    el("mode-overlay").classList.add("hidden");
+  });
+});
+
+el("mode-close").addEventListener("click", () => {
+  el("mode-overlay").classList.add("hidden");
+});
+
+// Info panel (the small "i" on the Predictive card)
+el("info-button").addEventListener("click", openInfo);
+el("info-close").addEventListener("click", closeInfo);
+el("info-overlay").addEventListener("click", e => {
+  if (e.target === el("info-overlay")) closeInfo();   // click on the dark background
+});
+
+// Escape closes the top-most overlay
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!el("info-overlay").classList.contains("hidden")) closeInfo();
+  else el("mode-overlay").classList.add("hidden");
+});
