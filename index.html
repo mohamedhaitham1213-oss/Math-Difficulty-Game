@@ -15,15 +15,12 @@
       <h1>Math Adventure</h1>
       <p class="subtitle">Answer the questions and collect your stars!</p>
 
-      <label for="player-id">Your ID</label>
-      <input id="player-id" placeholder="e.g. P01" autocomplete="off">
+      <label for="player-id">Your Name</label>
+      <input id="player-id" placeholder="Your name or nickname" maxlength="15" autocomplete="off">
 
-      <label for="mode-select">Mode</label>
-      <select id="mode-select">
-        <option value="static">Static (fixed level)</option>
-        <option value="rule">Rule-based</option>
-        <option value="predictive">Predictive (model)</option>
-      </select>
+      <label>Mode</label>
+      <input type="hidden" id="mode-select" value="">
+      <button id="select-mode-button" type="button" class="secondary">Select mode</button>
 
       <label for="level-select">Starting level</label>
       <select id="level-select">
@@ -60,6 +57,48 @@
     </section>
 
   </main>
+
+  <!-- Mode selection overlay -->
+  <div id="mode-overlay" class="overlay hidden">
+    <div class="mode-panel">
+      <h2>Choose a mode</h2>
+      <div class="mode-cards">
+
+        <div class="mode-wrap">
+          <button type="button" class="mode-card" data-mode="static">
+            <span class="mode-title">Static</span>
+            <span class="mode-info">The difficulty never changes. You stay on the level you started with for all 12 questions.</span>
+          </button>
+        </div>
+
+        <div class="mode-wrap">
+          <button type="button" class="mode-card" data-mode="rule">
+            <span class="mode-title">Rule-based</span>
+            <span class="mode-info">Simple rules: 3 correct answers in a row makes the game harder, and 2 wrong answers in a row makes it easier.</span>
+          </button>
+        </div>
+
+        <div class="mode-wrap">
+          <button type="button" class="mode-card" data-mode="predictive">
+            <span class="mode-title">Predictive</span>
+            <span class="mode-info">A small model looks at your last 3 answers (accuracy, speed and retries) and predicts the best next level.</span>
+          </button>
+          <button type="button" id="info-button" class="info-btn" aria-label="How does Predictive mode work?" title="How does it work?">i</button>
+        </div>
+
+      </div>
+      <button type="button" id="mode-close" class="secondary">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Predictive mode explanation overlay -->
+  <div id="info-overlay" class="overlay hidden">
+    <div class="mode-panel info-panel">
+      <h2>How does Predictive mode think? 🤔</h2>
+      <div id="info-content"></div>
+      <button type="button" id="info-close" class="primary">Got it!</button>
+    </div>
+  </div>
 
   <script src="game.js"></script>
 </body>
