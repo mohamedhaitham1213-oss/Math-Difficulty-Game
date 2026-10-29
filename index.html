@@ -1,18 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Math Adventure</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- floating math symbols and confetti layers (filled by game.js) -->
   <div id="bg" aria-hidden="true"></div>
   <div id="fx" aria-hidden="true"></div>
+
+  <!-- language and sound buttons -->
+  <div id="tools">
+    <button id="quit-button" class="tool-btn tool-quit hidden" type="button" data-i18n-aria="quitAria">✕</button>
+    <button id="lang-button" class="tool-btn" type="button" data-i18n-aria="langAria">عربي</button>
+    <button id="mute-button" class="tool-btn" type="button" aria-pressed="false" data-i18n-aria="soundAria">🔊</button>
+  </div>
 
   <main class="card">
 
@@ -44,30 +51,41 @@
           <path class="m-oops" d="M50 89 Q60 79 70 89" fill="none" stroke="#2b2d5b" stroke-width="4" stroke-linecap="round"/>
         </svg>
       </div>
-      <div id="bubble" class="bubble">Hi! I'm Numo. Let's do some math!</div>
+      <div id="bubble" class="bubble" data-i18n="hi">Hi! I'm Numo. Let's do some math!</div>
     </div>
 
     <!-- Screen 1: start -->
     <section id="start-screen">
-      <h1 class="title rainbow">Math Adventure</h1>
-      <p class="subtitle">Answer the questions and collect your stars!</p>
 
-      <label for="player-id">What's your name?</label>
-      <input id="player-id" placeholder="Your name or nickname" maxlength="15" autocomplete="off">
-
-      <label>Game mode</label>
-      <input type="hidden" id="mode-select" value="">
-      <button id="select-mode-button" type="button" class="btn btn-purple wide">🎮 Select mode</button>
-
-      <label>Starting level</label>
-      <input type="hidden" id="level-select" value="2">
-      <div class="level-chips">
-        <button type="button" class="chip chip-1" data-level="1">🌱 Easy</button>
-        <button type="button" class="chip chip-2 selected" data-level="2">⭐ Medium</button>
-        <button type="button" class="chip chip-3" data-level="3">🔥 Hard</button>
+      <!-- only visible with ?admin=1 -->
+      <div id="admin-box" class="admin-box hidden">
+        <div class="admin-tag">🔧 Researcher mode</div>
+        <button id="download-all-start" type="button" class="btn btn-blue small">📦 Download ALL saved sessions (<span id="saved-count">0</span>)</button>
       </div>
 
-      <button id="start-button" type="button" class="btn btn-green big">▶ Start</button>
+      <h1 class="title rainbow" data-i18n="appName">Math Adventure</h1>
+      <p class="subtitle" data-i18n="subtitle">Answer the questions and collect your stars!</p>
+
+      <label for="player-id" data-i18n="nameLabel">What's your name?</label>
+      <input id="player-id" data-i18n-ph="namePh" placeholder="Your name or nickname" maxlength="15" autocomplete="off">
+
+      <div id="mode-row">
+        <label data-i18n="modeLabel">Game mode</label>
+        <input type="hidden" id="mode-select" value="">
+        <button id="select-mode-button" type="button" class="btn btn-purple wide">🎮 Select mode</button>
+      </div>
+
+      <div id="level-row">
+        <label data-i18n="levelLabel">Starting level</label>
+        <input type="hidden" id="level-select" value="2">
+        <div class="level-chips">
+          <button type="button" class="chip chip-1" data-level="1" data-i18n="easy">🌱 Easy</button>
+          <button type="button" class="chip chip-2 selected" data-level="2" data-i18n="medium">⭐ Medium</button>
+          <button type="button" class="chip chip-3" data-level="3" data-i18n="hard">🔥 Hard</button>
+        </div>
+      </div>
+
+      <button id="start-button" type="button" class="btn btn-green big" data-i18n="start">▶ Start</button>
     </section>
 
     <!-- Screen 2: game -->
@@ -84,20 +102,24 @@
         <span class="goal">🪐</span>
       </div>
 
-      <div id="question-card"><div id="question"></div></div>
+      <div id="question-card">
+        <div id="question"></div>
+        <button id="speak-button" type="button" class="speak-btn" data-i18n-aria="speakAria">🔈</button>
+      </div>
       <div id="options"></div>
-      <div id="message"></div>
+      <div id="message" role="status" aria-live="polite"></div>
     </section>
 
     <!-- Screen 3: end -->
     <section id="end-screen" class="hidden">
       <div class="trophy">🏆</div>
-      <h1 class="title rainbow">Well done!</h1>
+      <h1 class="title rainbow" data-i18n="wellDone">Well done!</h1>
       <div id="stars-row"></div>
       <div id="summary"></div>
       <div class="buttons">
-        <button id="again-button" type="button" class="btn btn-green">🔄 Play again</button>
-        <button id="download-button" type="button" class="btn btn-blue">📥 Download data (CSV)</button>
+        <button id="again-button" type="button" class="btn btn-green" data-i18n="playAgain">🔄 Play again</button>
+        <button id="download-button" type="button" class="btn btn-blue hidden" data-i18n="download">📥 Download this session (CSV)</button>
+        <button id="download-all-button" type="button" class="btn btn-blue hidden" data-i18n="downloadAll">📦 Download ALL saved sessions</button>
       </div>
     </section>
 
@@ -106,45 +128,57 @@
   <!-- Mode selection overlay -->
   <div id="mode-overlay" class="overlay hidden">
     <div class="mode-panel">
-      <h2>Choose your game mode 🎮</h2>
+      <h2 data-i18n="chooseMode">Choose your game mode 🎮</h2>
       <div class="mode-cards">
 
         <div class="mode-wrap">
           <button type="button" class="mode-card" data-mode="static">
             <span class="mode-icon">🧊</span>
-            <span class="mode-title">Static</span>
-            <span class="mode-info">The difficulty never changes. You stay on the level you started with for all 12 questions.</span>
+            <span class="mode-title" data-i18n="mode_static">Static</span>
+            <span class="mode-info" data-i18n="info_static">The difficulty never changes.</span>
           </button>
         </div>
 
         <div class="mode-wrap">
           <button type="button" class="mode-card" data-mode="rule">
             <span class="mode-icon">📏</span>
-            <span class="mode-title">Rule-based</span>
-            <span class="mode-info">Simple rules: 3 correct answers in a row makes the game harder, and 2 wrong answers in a row makes it easier.</span>
+            <span class="mode-title" data-i18n="mode_rule">Rule-based</span>
+            <span class="mode-info" data-i18n="info_rule">Simple rules.</span>
           </button>
         </div>
 
         <div class="mode-wrap">
           <button type="button" class="mode-card" data-mode="predictive">
             <span class="mode-icon">🔮</span>
-            <span class="mode-title">Predictive</span>
-            <span class="mode-info">A small model looks at your last 3 answers (accuracy, speed and retries) and predicts the best next level.</span>
+            <span class="mode-title" data-i18n="mode_predictive">Predictive</span>
+            <span class="mode-info" data-i18n="info_predictive">A small model.</span>
           </button>
-          <button type="button" id="info-button" class="info-btn" aria-label="How does Predictive mode work?" title="How does it work?">i</button>
+          <button type="button" id="info-button" class="info-btn" data-i18n-aria="infoAria">i</button>
         </div>
 
       </div>
-      <button type="button" id="mode-close" class="btn btn-grey">Cancel</button>
+      <button type="button" id="mode-close" class="btn btn-grey" data-i18n="cancel">Cancel</button>
     </div>
   </div>
 
   <!-- Predictive mode explanation overlay -->
   <div id="info-overlay" class="overlay hidden">
     <div class="mode-panel info-panel">
-      <h2>How does Predictive mode think? 🤔</h2>
+      <h2 data-i18n="infoTitle">How does Predictive mode think? 🤔</h2>
       <div id="info-content"></div>
-      <button type="button" id="info-close" class="btn btn-blue">Got it!</button>
+      <button type="button" id="info-close" class="btn btn-blue" data-i18n="gotIt">Got it!</button>
+    </div>
+  </div>
+
+  <!-- "Stop playing?" overlay -->
+  <div id="quit-overlay" class="overlay hidden">
+    <div class="mode-panel small">
+      <h2 data-i18n="quitTitle">Stop playing?</h2>
+      <p data-i18n="quitText">Your stars so far will be saved.</p>
+      <div class="row">
+        <button type="button" id="quit-no" class="btn btn-green" data-i18n="quitNo">Keep playing</button>
+        <button type="button" id="quit-yes" class="btn btn-grey" data-i18n="quitYes">Yes, stop</button>
+      </div>
     </div>
   </div>
 
