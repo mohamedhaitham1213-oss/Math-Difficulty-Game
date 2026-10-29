@@ -1,7 +1,8 @@
 /* ==========================================================
    Math Adventure - styles
    1. Colours and basics   2. Layout   3. Start/end screens
-   4. Game screen          5. Buttons  6. Small screens
+   4. Game screen          5. Buttons  6. Mode overlay
+   7. Info panel           8. Small screens
    ========================================================== */
 
 /* ---------- 1. COLOURS AND BASICS ---------- */
@@ -150,6 +151,9 @@ button.primary { background: var(--blue); color: #fff; margin-top: 22px; }
 button.primary:hover { background: var(--blue-dark); }
 
 button.secondary { background: #e6ecf8; color: var(--blue); }
+button.secondary:hover { background: #d8e1f5; }
+
+#select-mode-button { width: 100%; }
 
 button.option {
   padding: 20px 10px;
@@ -163,7 +167,124 @@ button.correct { background: var(--green) !important; color: #fff; box-shadow: 0
 button.wrong   { background: var(--red) !important;   color: #fff; box-shadow: 0 4px 0 #b02a35; }
 
 
-/* ---------- 6. SMALL SCREENS ---------- */
+/* ---------- 6. MODE OVERLAY ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.mode-panel {
+  background: #fff;
+  color: var(--text);
+  border-radius: 24px;
+  padding: 24px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: center;
+}
+.mode-panel h2 { margin: 0; color: var(--blue); font-size: 28px; }
+
+.mode-cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.mode-wrap {
+  position: relative;
+  flex: 1 1 220px;
+  display: flex;
+}
+
+.mode-card {
+  flex: 1;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 30px 20px 20px;
+  border: 3px solid var(--blue);
+  border-radius: 16px;
+  background: #f4f7ff;
+  transition: transform 0.15s, background 0.15s;
+}
+.mode-card:hover { transform: scale(1.03); background: #e3ecff; }
+
+.mode-title { font-size: 24px; font-weight: bold; color: var(--blue); }
+.mode-info  { font-size: 16px; font-weight: normal; line-height: 1.4; color: var(--text); }
+
+/* small circled italic "i" in the corner of the Predictive card */
+.info-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--blue);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--blue);
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: bold;
+  font-size: 18px;
+  line-height: 1;
+}
+.info-btn:hover { background: var(--blue); color: #fff; }
+
+
+/* ---------- 7. INFO PANEL ---------- */
+#info-overlay { z-index: 110; }
+
+.info-panel { max-width: 660px; text-align: left; }
+.info-panel h2 { text-align: center; }
+.info-panel h3 { margin: 20px 0 6px; font-size: 20px; color: var(--blue); }
+.info-panel p, .info-panel li { font-size: 17px; line-height: 1.5; margin: 6px 0; }
+.info-panel ul { padding-left: 20px; margin: 6px 0; }
+.info-panel .primary { display: block; margin: 22px auto 0; }
+
+.formula {
+  margin: 8px 0;
+  padding: 12px 14px;
+  font-family: "Courier New", monospace;
+  font-size: 17px;
+  font-weight: bold;
+  line-height: 1.5;
+  color: var(--blue-dark);
+  background: #eef4ff;
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.example {
+  margin: 8px 0;
+  padding: 10px 14px;
+  font-size: 16px;
+  line-height: 1.5;
+  background: #f7f9ff;
+  border-left: 5px solid var(--blue);
+  border-radius: 8px;
+}
+
+
+/* ---------- 8. SMALL SCREENS ---------- */
 @media (max-width: 400px) {
   .card { padding: 20px 14px; }
   #question { font-size: 38px; }
