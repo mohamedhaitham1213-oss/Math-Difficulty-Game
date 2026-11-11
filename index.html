@@ -86,6 +86,7 @@
       </div>
 
       <button id="start-button" type="button" class="btn btn-green big" data-i18n="start">▶ Start</button>
+      <button id="boards-open" type="button" class="btn btn-blue wide boards-btn" data-i18n="boardsBtn">🏆 Leaderboards</button>
     </section>
 
     <!-- Screen 2: game -->
@@ -116,8 +117,15 @@
       <h1 class="title rainbow" data-i18n="wellDone">Well done!</h1>
       <div id="stars-row"></div>
       <div id="summary"></div>
+
+      <!-- leaderboard of the mode that was just played -->
+      <h2 id="end-board-title" class="lb-title"></h2>
+      <ol id="end-board-list" class="lb-list"></ol>
+      <p class="lb-note" data-i18n="boardNote">Only finished games count. Same score? The faster player ranks higher.</p>
+
       <div class="buttons">
         <button id="again-button" type="button" class="btn btn-green" data-i18n="playAgain">🔄 Play again</button>
+        <button id="boards-open-end" type="button" class="btn btn-purple" data-i18n="boardsAll">🏆 All leaderboards</button>
         <button id="download-button" type="button" class="btn btn-blue hidden" data-i18n="download">📥 Download this session (CSV)</button>
         <button id="download-all-button" type="button" class="btn btn-blue hidden" data-i18n="downloadAll">📦 Download ALL saved sessions</button>
       </div>
@@ -167,6 +175,20 @@
       <h2 data-i18n="infoTitle">How does Predictive mode think? 🤔</h2>
       <div id="info-content"></div>
       <button type="button" id="info-close" class="btn btn-blue" data-i18n="gotIt">Got it!</button>
+    </div>
+  </div>
+
+  <!-- Leaderboards overlay (5 boards) -->
+  <div id="boards-overlay" class="overlay hidden">
+    <div class="mode-panel board-panel">
+      <h2 data-i18n="boardsTitle">🏆 Leaderboards</h2>
+      <div id="board-tabs" class="board-tabs"></div>
+      <ol id="board-list" class="lb-list"></ol>
+      <p class="lb-note" data-i18n="boardNote">Only finished games count. Same score? The faster player ranks higher.</p>
+      <div class="row">
+        <button type="button" id="boards-clear" class="btn btn-grey small hidden" data-i18n="boardsClear">🗑️ Clear leaderboards</button>
+        <button type="button" id="boards-close" class="btn btn-blue" data-i18n="boardsClose">Close</button>
+      </div>
     </div>
   </div>
 
