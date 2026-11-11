@@ -132,6 +132,16 @@ const T = {
     endTop: "Math superstar, {name}!",
     endMid: "Great work, {name}!",
     endLow: "Nice try, {name}! Play again for more stars!",
+    boardsBtn: "🏆 Leaderboards",
+    boardsTitle: "🏆 Leaderboards",
+    boardTitle: "🏆 Leaderboard: {board}",
+    boardEmpty: "Nobody has played here yet. Be the first! 🌟",
+    boardNote: "Only finished games count. Same score? The faster player ranks higher.",
+    boardYou: "you",
+    boardsAll: "🏆 All leaderboards",
+    boardsClose: "Close",
+    boardsClear: "🗑️ Clear leaderboards",
+    boardsClearAsk: "Delete ALL names and scores from the leaderboards on this device? (The CSV session data is kept.)",
     sayPlus: "plus", sayMinus: "minus", sayTimes: "times", sayEquals: "equals what?",
     langAria: "Change language",
     soundAria: "Sound on or off",
@@ -217,6 +227,16 @@ const T = {
     endTop: "نجم الرياضيات يا {name}!",
     endMid: "عمل رائع يا {name}!",
     endLow: "محاولة جميلة يا {name}! العب مرة أخرى لتجمع نجوماً أكثر!",
+    boardsBtn: "🏆 لوحات الصدارة",
+    boardsTitle: "🏆 لوحات الصدارة",
+    boardTitle: "🏆 لوحة الصدارة: {board}",
+    boardEmpty: "لم يلعب أحد هنا بعد. كن الأول! 🌟",
+    boardNote: "تُحتسب الألعاب المكتملة فقط. عند تساوي الدرجات يتقدم الأسرع.",
+    boardYou: "أنت",
+    boardsAll: "🏆 كل لوحات الصدارة",
+    boardsClose: "إغلاق",
+    boardsClear: "🗑️ مسح لوحات الصدارة",
+    boardsClearAsk: "هل تريد حذف كل الأسماء والدرجات من لوحات الصدارة على هذا الجهاز؟ (تبقى بيانات الجلسات الخاصة بملف CSV.)",
     sayPlus: "زائد", sayMinus: "ناقص", sayTimes: "ضرب في", sayEquals: "يساوي كم؟",
     langAria: "تغيير اللغة",
     soundAria: "تشغيل الصوت أو إيقافه",
@@ -689,6 +709,7 @@ function startGame() {
     playerId: "P" + Math.random().toString(36).slice(2, 8),         // anonymous, goes in the CSV
     mode: getMode(),
     level: parseInt(el("level-select").value, 10),
+    startLevel: parseInt(el("level-select").value, 10),              // decides which static leaderboard the score goes to
     sessionId: "S" + Date.now(),
     questionIndex: 0,
     history: [],                                 // { correct (right in the end), timeMs, retries }
@@ -853,6 +874,22 @@ function endGame(quit) {
   const correct = log.filter(row => row.correct_first_try === 1).length;
   el("summary").textContent = t("summary", { name: state.playerName, c: correct });
   buildStarsRow(correct);
+
+  // Leaderboard: only finished games are added (a quit game has fewer questions, so it would not be fair)
+  const board = boardKeyFor(state.mode, state.startLevel);
+  if (!quit) {
+    addBoardEntry(board, {
+      id: state.sessionId,
+      name: state.playerName,
+      score: correct,
+      total: N_QUESTIONS,
+      timeMs: log.reduce((sum, row) => sum + row.response_time_ms, 0),
+      date: new Date().toISOString()
+    });
+  }
+  el("end-board-title").textContent = t("boardTitle", { board: boardLabel(board) });
+  renderBoard(el("end-board-list"), board, quit ? null : state.sessionId);
+  state.board = board;
   say(endLine(correct, state.playerName), "happy");
   confetti(window.innerWidth / 2, window.innerHeight / 3, 70);
   sfx("end");
@@ -957,6 +994,153 @@ function downloadAll() {
 
 function refreshSavedCount() {
   el("saved-count").textContent = savedSessionKeys().length;
+}
+
+
+/* ---------- 8b. LEADERBOARDS ----------
+   Five separate boards: predictive, rule-based, static easy, static medium, static hard.
+   A finished game adds { name, score, time } to its board. Score = answers right on the first try,
+   the same number as the "mark" on the end screen; the same score is ranked by the shorter total time.
+   Everything is stored ONLY in this browser (key below), apart from the CSV session data.
+   The typed names are shown here but never go into the CSV (it only gets the random player ID). */
+
+const BOARD_KEY = "mathgame_leaderboard";
+const BOARD_MAX = 200;                           // entries kept per board (the best ones)
+const BOARDS = [
+  { key: "predictive", icon: "🔮" },
+  { key: "rule",       icon: "📏" },
+  { key: "static_1",   icon: "🧊", level: 1 },
+  { key: "static_2",   icon: "🧊", level: 2 },
+  { key: "static_3",   icon: "🧊", level: 3 }
+];
+let boardsMem = {};                              // fallback if the browser blocks storage
+let currentBoard = "predictive";                 // tab open in the leaderboard window
+
+// static games go to the board of their starting level; the two adaptive modes have one board each
+function boardKeyFor(mode, startLevel) {
+  return mode === "static" ? "static_" + startLevel : mode;
+}
+
+function boardLabel(key) {
+  const b = BOARDS.find(x => x.key === key) || BOARDS[0];
+  return b.level ? `${b.icon} ${t("mode_static")} · ${t("lvl" + b.level)}` : `${b.icon} ${t("mode_" + b.key)}`;
+}
+
+function loadBoards() {
+  const raw = readStore(BOARD_KEY);
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      if (data && typeof data === "object" && !Array.isArray(data)) return data;
+    } catch (e) { /* damaged entry: start again */ }
+  }
+  return boardsMem;
+}
+
+function saveBoards(data) {
+  boardsMem = data;
+  writeStore(BOARD_KEY, JSON.stringify(data));
+}
+
+// best first: higher score, then shorter time, then earlier game
+function sortedBoard(key) {
+  const list = Array.isArray(loadBoards()[key]) ? loadBoards()[key] : [];
+  return list.slice().sort((a, b) =>
+    (Number(b.score) || 0) - (Number(a.score) || 0) ||
+    (Number(a.timeMs) || 0) - (Number(b.timeMs) || 0) ||
+    String(a.date).localeCompare(String(b.date)));
+}
+
+function addBoardEntry(key, entry) {
+  const data = Object.assign({}, loadBoards());
+  const list = Array.isArray(data[key]) ? data[key].slice() : [];
+  list.push(entry);
+  data[key] = list.sort((a, b) =>
+    b.score - a.score || a.timeMs - b.timeMs || String(a.date).localeCompare(String(b.date))
+  ).slice(0, BOARD_MAX);
+  saveBoards(data);
+}
+
+// Draws one board into an <ol>. highlightId = the game that just finished (shown in yellow).
+function renderBoard(listEl, key, highlightId) {
+  listEl.innerHTML = "";
+  const rows = sortedBoard(key);
+  if (rows.length === 0) {
+    const li = document.createElement("li");
+    li.className = "lb-empty";
+    li.textContent = t("boardEmpty");
+    listEl.appendChild(li);
+    return;
+  }
+  const MEDALS = ["🥇", "🥈", "🥉"];
+  let mine = null;
+  rows.forEach((r, i) => {
+    const li = document.createElement("li");
+    li.className = "lb-row" + (highlightId && r.id === highlightId ? " me" : "");
+
+    const rank = document.createElement("span");
+    rank.className = "lb-rank";
+    rank.textContent = i < 3 ? MEDALS[i] : String(i + 1);
+
+    const name = document.createElement("span");
+    name.className = "lb-name";
+    const nameText = document.createElement("bdi");
+    nameText.textContent = String(r.name || t("defaultName"));      // names are shown as plain text only
+    name.appendChild(nameText);
+
+    const score = document.createElement("span");
+    score.className = "lb-score";
+    const scoreText = document.createElement("bdi");
+    scoreText.dir = "ltr";
+    scoreText.textContent = `⭐ ${Number(r.score) || 0} / ${Number(r.total) || N_QUESTIONS}`;
+    score.appendChild(scoreText);
+
+    li.append(rank, name);
+    if (highlightId && r.id === highlightId) {
+      const you = document.createElement("span");
+      you.className = "lb-you";
+      you.textContent = t("boardYou");
+      li.appendChild(you);
+      mine = li;
+    }
+    li.appendChild(score);
+    listEl.appendChild(li);
+  });
+  if (mine) listEl.scrollTop = Math.max(0, mine.offsetTop - listEl.clientHeight / 2);   // show the new entry
+}
+
+// The leaderboard window (opened from the start screen or the end screen)
+function showBoardTab(key) {
+  currentBoard = key;
+  const tabs = el("board-tabs");
+  tabs.innerHTML = "";
+  BOARDS.forEach(b => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "board-tab" + (b.key === key ? " selected" : "");
+    button.dataset.board = b.key;
+    button.textContent = boardLabel(b.key);
+    button.setAttribute("aria-pressed", b.key === key ? "true" : "false");
+    button.addEventListener("click", () => showBoardTab(b.key));
+    tabs.appendChild(button);
+  });
+  renderBoard(el("board-list"), key, state && state.sessionId && state.ended ? state.sessionId : null);
+}
+
+function openBoards(key) {
+  if (!key) key = getMode() ? boardKeyFor(getMode(), parseInt(el("level-select").value, 10)) : currentBoard;
+  showBoardTab(key);
+  el("boards-overlay").classList.remove("hidden");
+}
+
+function closeBoards() {
+  el("boards-overlay").classList.add("hidden");
+}
+
+function clearBoards() {
+  if (!confirm(t("boardsClearAsk"))) return;
+  saveBoards({});
+  showBoardTab(currentBoard);
 }
 
 
@@ -1066,6 +1250,7 @@ function setupFromLink() {
   el("admin-box").classList.toggle("hidden", !ADMIN);
   el("download-button").classList.toggle("hidden", !ADMIN);
   el("download-all-button").classList.toggle("hidden", !ADMIN);
+  el("boards-clear").classList.toggle("hidden", !ADMIN);
 
   if (!("speechSynthesis" in window)) el("speak-button").classList.add("hidden");
   refreshSavedCount();
@@ -1073,7 +1258,8 @@ function setupFromLink() {
 }
 
 function closeTopOverlay() {
-  if (!el("info-overlay").classList.contains("hidden")) closeInfo();
+  if (!el("boards-overlay").classList.contains("hidden")) closeBoards();
+  else if (!el("info-overlay").classList.contains("hidden")) closeInfo();
   else if (!el("quit-overlay").classList.contains("hidden")) el("quit-overlay").classList.add("hidden");
   else el("mode-overlay").classList.add("hidden");
 }
@@ -1088,6 +1274,15 @@ el("download-all-button").addEventListener("click", downloadAll);
 el("download-all-start").addEventListener("click", downloadAll);
 el("again-button").addEventListener("click", () => location.reload());
 el("speak-button").addEventListener("click", speakQuestion);
+
+// Leaderboards
+el("boards-open").addEventListener("click", () => openBoards());
+el("boards-open-end").addEventListener("click", () => openBoards(state.board));
+el("boards-close").addEventListener("click", closeBoards);
+el("boards-clear").addEventListener("click", clearBoards);
+el("boards-overlay").addEventListener("click", e => {
+  if (e.target === el("boards-overlay")) closeBoards();   // click on the dark background
+});
 
 // Language button
 el("lang-button").addEventListener("click", () => {
