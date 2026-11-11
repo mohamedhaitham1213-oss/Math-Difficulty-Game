@@ -24,7 +24,9 @@
    sound = 0                                     (starts muted)
    admin = 1                                     (shows pickers + CSV buttons)  */
 
-const BUILD = "2026-10-29-v3";                   // logged with every row: which design made the data
+// v4 (2026-11-11): accuracy now counts "right in the end" (first try OR after the retry), so the retry
+// clue is no longer just "1 - accuracy". f_accuracy in v3 data meant "right on the first try".
+const BUILD = "2026-11-11-v4";                   // logged with every row: which design made the data
 const MODES = ["static", "rule", "predictive"];
 
 const params = new URLSearchParams(location.search);
@@ -57,6 +59,8 @@ const RULE_WRONG_DOWN = 2;                       // wrong in a row -> easier
 //   p = 1 / (1 + e^(-z))
 // PLACEHOLDER weights - replace with weights trained in Python.
 // The info panel in the mode screen reads these values automatically.
+// Reading of the placeholders, per answer in the window (time left out):
+//   right on the first try = +4.0     right after a retry = +4.0 - 3.0 = +1.0     missed = -3.0
 const MODEL = { b: -0.5, w_acc: 4.0, w_time: -1.5, w_retry: -3.0 };
 const P_UP = 0.70;                               // p above this -> harder
 const P_DOWN = 0.35;                             // p below this -> easier
@@ -144,9 +148,9 @@ const T = {
     i1: "The game looks at how you did on your last {window} questions and uses three clues. It waits until you have answered {window} questions at a level, so one lucky (or unlucky) answer can never change things on its own.",
     iT2: "2. The three clues and their weights",
     i2: "A <b>weight</b> tells the game how important a clue is. The bigger the number, the more that clue matters. A <b>+</b> means the clue adds points, a <b>−</b> means it takes points away.",
-    iAcc: "✅ <b>Right the first time</b> (accuracy): from 0 (none) to 1 (all {window}). Weight {w} → {effect}.",
+    iAcc: "✅ <b>Right answers</b> (accuracy): how many of your last {window} questions you got right in the end, even after a retry: from 0 (none) to 1 (all {window}). Weight {w} → {effect}.",
     iTime: "⏱️ <b>Speed</b> (how long you think): from 0 (super fast) to 1 ({cap} seconds or more). Weight {w} → {effect}.",
-    iRetry: "🔁 <b>Retries</b> (extra tries needed): the average number of retries per question. Weight {w} → {effect}.",
+    iRetry: "🔁 <b>Retries</b> (extra tries needed): how often you needed a second try: from 0 (never) to 1 (every time). Weight {w} → {effect}.",
     effAdd: "adds points",
     effSub: "takes points away",
     iT3: "3. Add it all up: the score z",
@@ -160,8 +164,9 @@ const T = {
     i5Stay: "👍 In between → you <b>stay</b> on the same level.",
     iT6: "6. Examples",
     ex1: "3 of 3 right the first time, about 5 seconds each, no retries",
-    ex2: "2 of 3 right the first time, one retry, about 7.5 seconds each",
-    ex3: "1 of 3 right the first time, two retries, about 12 seconds each",
+    ex2: "3 of 3 right in the end: 1 the first time and 2 after a retry, about 8 seconds each",
+    ex3: "2 of 3 right the first time and 1 missed after a retry, about 7.5 seconds each",
+    ex4: "1 of 3 right the first time and 2 missed after a retry, about 12 seconds each",
     exResult: "z = {z} → ready-chance p = {p} → <b>{outcome}</b>",
     outUp: "🚀 harder level",
     outDown: "🌱 easier level",
@@ -228,9 +233,9 @@ const T = {
     i1: "تنظر اللعبة إلى أدائك في آخر {window} أسئلة وتستخدم ثلاثة أدلة. وتنتظر حتى تجيب عن {window} أسئلة في المستوى الواحد، فلا تستطيع إجابة واحدة محظوظة (أو سيئة الحظ) أن تغيّر شيئاً وحدها.",
     iT2: "2. الأدلة الثلاثة وأوزانها",
     i2: "<b>الوزن</b> يخبر اللعبة بمدى أهمية الدليل. كلما كان الرقم أكبر زادت أهمية الدليل. علامة <b>+</b> تعني أن الدليل يضيف نقاطاً، وعلامة <b>−</b> تعني أنه يأخذ نقاطاً.",
-    iAcc: "✅ <b>الإجابة الصحيحة من أول مرة</b> (الدقة): من 0 (لا شيء) إلى 1 (كل الأسئلة الـ {window}). الوزن {w} ← {effect}.",
+    iAcc: "✅ <b>الإجابات الصحيحة</b> (الدقة): كم سؤالاً من آخر {window} أسئلة أجبت عنه صحيحاً في النهاية، حتى بعد محاولة ثانية: من 0 (لا شيء) إلى 1 (الكل). الوزن {w} ← {effect}.",
     iTime: "⏱️ <b>السرعة</b> (مقدار تفكيرك): من 0 (سريع جداً) إلى 1 ({cap} ثانية أو أكثر). الوزن {w} ← {effect}.",
-    iRetry: "🔁 <b>المحاولات</b> (المحاولات الإضافية): متوسط عدد المحاولات الإضافية لكل سؤال. الوزن {w} ← {effect}.",
+    iRetry: "🔁 <b>المحاولات</b> (المحاولات الإضافية): كم مرة احتجت إلى محاولة ثانية: من 0 (أبداً) إلى 1 (في كل مرة). الوزن {w} ← {effect}.",
     effAdd: "يضيف نقاطاً",
     effSub: "يأخذ نقاطاً",
     iT3: "3. اجمع كل شيء: الدرجة z",
@@ -244,8 +249,9 @@ const T = {
     i5Stay: "👍 وإذا كانت بينهما ← <b>تبقى</b> في المستوى نفسه.",
     iT6: "6. أمثلة",
     ex1: "3 من 3 صحيحة من أول مرة، حوالي 5 ثوانٍ لكل سؤال، بلا محاولات إضافية",
-    ex2: "2 من 3 صحيحة من أول مرة، محاولة إضافية واحدة، حوالي 7.5 ثانية لكل سؤال",
-    ex3: "1 من 3 صحيحة من أول مرة، محاولتان إضافيتان، حوالي 12 ثانية لكل سؤال",
+    ex2: "3 من 3 صحيحة في النهاية: واحدة من أول مرة واثنتان بعد محاولة ثانية، حوالي 8 ثوانٍ لكل سؤال",
+    ex3: "2 من 3 صحيحة من أول مرة وواحدة خاطئة بعد المحاولة الثانية، حوالي 7.5 ثانية لكل سؤال",
+    ex4: "1 من 3 صحيحة من أول مرة واثنتان خاطئتان بعد المحاولة الثانية، حوالي 12 ثانية لكل سؤال",
     exResult: "z = {z} ← فرصة الاستعداد p = {p} ← <b>{outcome}</b>",
     outUp: "🚀 مستوى أصعب",
     outDown: "🌱 مستوى أسهل",
@@ -381,9 +387,11 @@ function makeQuestion(level) {
 /* ---------- 4. FEATURES ---------- */
 
 // Computed over the last WINDOW answered questions.
-//   accuracy: share answered correctly on the first try (0..1)
+//   accuracy: share answered correctly in the end - first try or after the retry (0..1)
 //   time:     average response time, capped and scaled (0..1)
-//   retry:    average number of retries per question
+//   retry:    average number of retries per question = share of questions that needed a second try (0..1)
+// Each answer is in one of three states: right first time (acc 1, retry 0), right after a retry
+// (acc 1, retry 1) or missed (acc 0, retry 1) - so accuracy and retry are two independent clues.
 function computeFeatures(history) {
   const last = history.slice(-WINDOW);
   const n = last.length;
@@ -683,9 +691,9 @@ function startGame() {
     level: parseInt(el("level-select").value, 10),
     sessionId: "S" + Date.now(),
     questionIndex: 0,
-    history: [],                                 // { correct, timeMs, retries }
-    streak: 0,                                   // consecutive first-try correct
-    wrongStreak: 0,                              // consecutive not first-try correct
+    history: [],                                 // { correct (right in the end), timeMs, retries }
+    streak: 0,                                   // consecutive first-try correct (rule-based engine only)
+    wrongStreak: 0,                              // consecutive not first-try correct (rule-based engine only)
     seen: new Set(),                             // questions already asked (no repeats)
     stars: 0,                                    // first-try correct answers (display only)
     shownLevel: null,                            // last level shown on the badge (display only)
@@ -800,7 +808,7 @@ function finishQuestion(finalCorrect) {
   const firstTryCorrect = finalCorrect && state.attempts === 1;
 
   // Update history and streaks
-  state.history.push({ correct: firstTryCorrect, timeMs, retries });
+  state.history.push({ correct: finalCorrect, timeMs, retries });     // v4: right in the end, not only first try
   if (firstTryCorrect) { state.streak++; state.wrongStreak = 0; }
   else                 { state.streak = 0; state.wrongStreak++; }
 
@@ -979,9 +987,10 @@ function buildInfo() {
   // Worked examples (written for WINDOW = 3), calculated with the real model
   const seconds = s => Math.min(s * 1000, TIME_CAP_MS) / TIME_CAP_MS;
   const examples = [
-    { icon: "🌟", key: "ex1", f: { accuracy: 3 / 3, time: seconds(5),   retry: 0 } },
-    { icon: "🙂", key: "ex2", f: { accuracy: 2 / 3, time: seconds(7.5), retry: 1 / 3 } },
-    { icon: "😅", key: "ex3", f: { accuracy: 1 / 3, time: seconds(12),  retry: 2 / 3 } }
+    { icon: "🌟", key: "ex1", f: { accuracy: 3 / 3, time: seconds(5),   retry: 0 } },       // right, right, right
+    { icon: "🤔", key: "ex2", f: { accuracy: 3 / 3, time: seconds(8),   retry: 2 / 3 } },   // right, right after retry x2
+    { icon: "🙂", key: "ex3", f: { accuracy: 2 / 3, time: seconds(7.5), retry: 1 / 3 } },   // right, right, missed
+    { icon: "😅", key: "ex4", f: { accuracy: 1 / 3, time: seconds(12),  retry: 2 / 3 } }    // right, missed, missed
   ];
 
   const exampleHtml = examples.map(ex => {
