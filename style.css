@@ -656,6 +656,59 @@ label {
 .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 22px; }
 
 
+/* ---------- 9b. LEADERBOARDS ---------- */
+.boards-btn { margin-top: 14px; }
+.board-panel { max-width: 560px; }
+.board-panel .lb-list { max-height: 45vh; }
+
+.board-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px 0 12px; }
+.board-tab {
+  min-height: 44px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--blue-d);
+  background: #fff;
+  border: 3px solid var(--blue);
+  border-radius: 14px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.board-tab:hover { transform: translateY(-2px); }
+.board-tab.selected { color: #fff; background: var(--blue); box-shadow: 0 4px 0 var(--blue-d); }
+
+.lb-title { margin: 18px 0 8px; font-size: 24px; color: var(--purple); }
+.lb-list {
+  position: relative;
+  list-style: none;
+  margin: 0 auto 8px;
+  padding: 0;
+  max-width: 440px;
+  max-height: 210px;
+  overflow-y: auto;
+  background: #fff;
+  border: 3px solid var(--yellow);
+  border-radius: 18px;
+}
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 19px;
+  text-align: start;
+  border-bottom: 2px dashed #ececf6;
+}
+.lb-row:last-child { border-bottom: 0; }
+.lb-row.me { background: #fff3b0; font-weight: 700; }
+.lb-rank { flex: none; width: 2.2em; text-align: center; font-weight: 700; color: var(--muted); }
+.lb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-score { flex: none; font-weight: 700; color: var(--blue-d); }
+.lb-you { flex: none; padding: 2px 10px; font-size: 14px; font-weight: 700; color: #fff; background: var(--pink); border-radius: 999px; }
+.lb-empty { padding: 14px; font-size: 18px; color: var(--muted); text-align: center; }
+.lb-note { margin: 6px 0 14px; font-size: 14px; color: var(--muted); }
+
+
 /* ---------- 10. ANIMATIONS ---------- */
 @keyframes cardIn { from { opacity: 0; transform: translateY(30px) scale(0.94); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
