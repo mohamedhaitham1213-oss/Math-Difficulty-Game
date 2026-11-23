@@ -83,7 +83,7 @@ const ONLINE_TIMEOUT_MS = 8000;                  // give up on the shared board 
 // Online data return (the same Google Sheet script, "data" tab). "" = OFF: nothing is sent anywhere.
 // Paste the web-app address (ends in /exec) here ONLY after ethics approval and parents' consent are settled.
 // Every answer row is sent WITHOUT the typed name (the CSV has only a random player id). Never sent in ?admin=1.
-const DATA_URL = "";
+const DATA_URL = "https://script.google.com/macros/s/AKfycby6Wu59vGQ_EXNF7sI1MgIDpkej6b4YlBv1gSgGbQVcU9jGb_i8lyYjmbOQ8KTZ2b_MXw/exec";
 const ASSIGN_TIMEOUT_MS = 2500;                  // how long Start waits for the sheet to name the version of the game
 
 // The versions of the game a child can be given (same keys as the leaderboards).
