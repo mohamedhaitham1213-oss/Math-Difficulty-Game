@@ -645,6 +645,7 @@ label {
   border-radius: 16px;
 }
 .admin-tag { margin-bottom: 8px; font-weight: 700; color: #a67c00; }
+.admin-note { margin-top: 8px; font-size: 14px; color: #7a6200; }
 
 /* the stop button lives in the top corner during the game */
 .tool-quit { color: var(--red-d); border-color: var(--red); box-shadow: 0 4px 0 var(--red-d); }
@@ -706,6 +707,7 @@ label {
 .lb-score { flex: none; font-weight: 700; color: var(--blue-d); }
 .lb-you { flex: none; padding: 2px 10px; font-size: 14px; font-weight: 700; color: #fff; background: var(--pink); border-radius: 999px; }
 .lb-empty { padding: 14px; font-size: 18px; color: var(--muted); text-align: center; }
+.lb-status { margin: 6px 0 0; font-size: 15px; font-weight: 600; color: var(--orange-d); }
 .lb-note { margin: 6px 0 14px; font-size: 14px; color: var(--muted); }
 
 
@@ -801,3 +803,26 @@ html[dir="rtl"] .title { letter-spacing: 0; }
   }
   #bg { display: none; }
 }
+
+
+/* ---------- 9c. CONSENT BOX (online data) ---------- */
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+  background: #eef3ff;
+  border: 3px solid var(--blue);
+  border-radius: 16px;
+  cursor: pointer;
+}
+.consent-row input { flex: 0 0 auto; width: 26px; height: 26px; margin: 0; accent-color: var(--green-d); cursor: pointer; }
+.consent-row.shake { animation: shake 0.5s ease; }
+
+.end-code { margin: 10px 0 0; font-size: 14px; line-height: 1.45; color: var(--muted); }
+.end-code bdi { font-weight: 700; color: var(--ink); letter-spacing: 1px; }
