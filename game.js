@@ -16,25 +16,30 @@
 
 
 /* ---------- 0. SETTINGS FROM THE LINK ----------
-   Researcher link:  ...?admin=1
-   Child link:       ...?mode=rule&level=2&lang=en
-   mode  = static | rule | predictive | random   (hides the mode picker)
-   level = 1 | 2 | 3                             (hides the level picker)
+   Child link (plain):  ...play.html           -> every child gets the PREDICTIVE version (see ARM_KEYS below)
+   Fixed link:          ...play.html?mode=rule&level=2&lang=en
+   Researcher link:     ...play.html?admin=1   -> pickers visible, nothing is sent online
+   (Parents arrive through the landing page index.html, which asks for consent first and then opens play.html.)
+   mode  = static | rule | predictive | random   (random = the default of a plain link; a fixed mode hides the picker)
+   level = 1 | 2 | 3                             (hides the level picker; ignored when the mode is random)
    lang  = en | ar                               (hides the language button)
    sound = 0                                     (starts muted)
-   admin = 1                                     (shows pickers + CSV buttons)  */
+   admin = 1                                     (shows pickers + CSV buttons, never sends data online)  */
 
 // v4 (2026-11-11): accuracy now counts "right in the end" (first try OR after the retry), so the retry
 // clue is no longer just "1 - accuracy". f_accuracy in v3 data meant "right on the first try".
-const BUILD = "2026-11-11-v4";                   // logged with every row: which design made the data
+// v4b (2026-11-23): random assignment of the game version, the same anonymous player id on every game of a device,
+// 3 new columns at the end (game_no, start_level, assigned) and optional online data return. The clues are unchanged.
+const BUILD = "2026-11-23-v4b";                  // logged with every row: which design made the data
 const MODES = ["static", "rule", "predictive"];
 
 const params = new URLSearchParams(location.search);
 const ADMIN = params.get("admin") === "1";
 
-let URL_MODE = params.get("mode");
-if (URL_MODE === "random") URL_MODE = MODES[Math.floor(Math.random() * MODES.length)];
-if (!MODES.includes(URL_MODE)) URL_MODE = null;
+const MODE_PARAM = params.get("mode");
+const URL_MODE = MODES.includes(MODE_PARAM) ? MODE_PARAM : null;
+// Random assignment is the default for a child (plain link). A researcher (?admin=1) picks by hand unless ?mode=random.
+const RANDOM_ASSIGN = MODE_PARAM === "random" || (!URL_MODE && !ADMIN);
 
 const URL_LEVEL = [1, 2, 3].includes(Number(params.get("level"))) ? Number(params.get("level")) : null;
 const URL_LANG = ["en", "ar"].includes(params.get("lang")) ? params.get("lang") : null;
@@ -68,6 +73,33 @@ const TIME_CAP_MS = 15000;                       // response time capped, scaled
 
 const DELAY_NEXT_MS = 1200;                      // pause before the next question
 
+// Shared online leaderboard (a Google Sheet with the script online_apps_script.gs).
+// "" = OFF: scores stay on this device only and nothing is sent anywhere.
+// Paste the web-app address (ends in /exec) here ONLY after the ethics/consent for online data is settled.
+// Only name, score, time and the board are sent. The CSV research data never leaves the device this way.
+const LEADERBOARD_URL = "";
+const ONLINE_TIMEOUT_MS = 8000;                  // give up on the shared board after this long
+
+// Online data return (the same Google Sheet script, "data" tab). "" = OFF: nothing is sent anywhere.
+// Paste the web-app address (ends in /exec) here ONLY after ethics approval and parents' consent are settled.
+// Every answer row is sent WITHOUT the typed name (the CSV has only a random player id). Never sent in ?admin=1.
+const DATA_URL = "";
+const ASSIGN_TIMEOUT_MS = 2500;                  // how long Start waits for the sheet to name the version of the game
+
+// The versions of the game a child can be given (same keys as the leaderboards).
+// Adaptive modes start at level 2 (the same start the weight simulation used).
+const ARMS = {
+  predictive: { mode: "predictive", level: 2 },
+  rule:       { mode: "rule",       level: 2 },
+  static_1:   { mode: "static",     level: 1 },
+  static_2:   { mode: "static",     level: 2 },
+  static_3:   { mode: "static",     level: 3 }
+};
+// WHICH versions are handed out. Right now: ONLY predictive, because this round of data collection is about how well
+// the predictive formula matches the children's answers. To compare engines later, use Object.keys(ARMS) here (every
+// version gets the same chance, balanced by the sheet) AND change ARM_KEYS in the Apps Script too.
+const ARM_KEYS = ["predictive"];
+
 const el = id => document.getElementById(id);
 
 // The mode is chosen in the "Select mode" overlay or fixed by the link.
@@ -80,6 +112,9 @@ function readStore(key) {
 }
 function writeStore(key, value) {
   try { localStorage.setItem(key, value); } catch (e) { /* storage may be blocked */ }
+}
+function removeStore(key) {
+  try { localStorage.removeItem(key); } catch (e) { /* storage may be blocked */ }
 }
 
 
@@ -138,10 +173,17 @@ const T = {
     boardEmpty: "Nobody has played here yet. Be the first! 🌟",
     boardNote: "Only finished games count. Same score? The faster player ranks higher.",
     boardYou: "you",
+    boardLoading: "Loading shared scores…",
+    boardOffline: "Can't reach the shared leaderboard. Showing scores from this device only.",
     boardsAll: "🏆 All leaderboards",
     boardsClose: "Close",
     boardsClear: "🗑️ Clear leaderboards",
     boardsClearAsk: "Delete ALL names and scores from the leaderboards on this device? (The CSV session data is kept.)",
+    // consent box (only shown when DATA_URL is set). DRAFT wording: replace with the text your ethics board approves.
+    consentText: "A parent or teacher said it is OK for me to play. My answers and times are saved without my name, to help study how maths games can fit each child. I can stop any time.",
+    consentBoard: " My nickname and score show on the shared leaderboard.",
+    consentNeeded: "Please tick the box first (ask a grown-up).",
+    codeLine: "Participation code: <bdi dir=\"ltr\">{code}</bdi>. If you ever want your child's answers deleted, send this code to the researcher.",
     sayPlus: "plus", sayMinus: "minus", sayTimes: "times", sayEquals: "equals what?",
     langAria: "Change language",
     soundAria: "Sound on or off",
@@ -233,10 +275,16 @@ const T = {
     boardEmpty: "لم يلعب أحد هنا بعد. كن الأول! 🌟",
     boardNote: "تُحتسب الألعاب المكتملة فقط. عند تساوي الدرجات يتقدم الأسرع.",
     boardYou: "أنت",
+    boardLoading: "جارٍ تحميل الدرجات المشتركة…",
+    boardOffline: "تعذّر الوصول إلى لوحة الصدارة المشتركة. تظهر الدرجات المحفوظة على هذا الجهاز فقط.",
     boardsAll: "🏆 كل لوحات الصدارة",
     boardsClose: "إغلاق",
     boardsClear: "🗑️ مسح لوحات الصدارة",
     boardsClearAsk: "هل تريد حذف كل الأسماء والدرجات من لوحات الصدارة على هذا الجهاز؟ (تبقى بيانات الجلسات الخاصة بملف CSV.)",
+    consentText: "وافق أحد الوالدين أو المعلّم على أن ألعب. تُحفظ إجاباتي وأوقاتي دون اسمي للمساعدة في دراسة كيف يمكن لألعاب الرياضيات أن تناسب كل طفل. أستطيع التوقف في أي وقت.",
+    consentBoard: " يظهر لقبي ودرجتي في لوحة الصدارة المشتركة.",
+    consentNeeded: "من فضلك ضع علامة في المربع أولاً (اسأل شخصاً بالغاً).",
+    codeLine: "رمز المشاركة: <bdi dir=\"ltr\">{code}</bdi>. إذا رغبتم يوماً في حذف إجابات طفلكم، أرسلوا هذا الرمز إلى الباحث.",
     sayPlus: "زائد", sayMinus: "ناقص", sayTimes: "ضرب في", sayEquals: "يساوي كم؟",
     langAria: "تغيير اللغة",
     soundAria: "تشغيل الصوت أو إيقافه",
@@ -313,6 +361,7 @@ function applyLang() {
     node.setAttribute("aria-label", t(node.dataset.i18nAria));
   });
 
+  el("consent-text").textContent = t("consentText") + (LEADERBOARD_URL ? t("consentBoard") : "");
   rainbowTitles();
   refreshModeButton();
   el("lang-button").textContent = lang === "ar" ? "EN" : "عربي";
@@ -697,16 +746,49 @@ function speakQuestion() {
 let state = {};
 let log = [];                                    // one row per question
 
-function startGame() {
-  // No mode chosen yet: open the mode overlay instead of starting
-  if (!getMode()) {
-    el("mode-overlay").classList.remove("hidden");
+let starting = false;                            // true while Start waits for the version of the game to be assigned
+
+// Start button: check consent, give the game its version (random for a child), then begin.
+async function startGame() {
+  if (starting) return;
+
+  // Online data is ON: the box must be ticked once on this device (a grown-up agrees).
+  if (dataOn() && !consentGiven()) {
+    say(t("consentNeeded"), "oops");
+    restart(el("consent-row"), "shake");
     return;
   }
 
+  let assigned = URL_MODE ? "link" : "admin";
+  if (RANDOM_ASSIGN) {
+    starting = true;
+    el("start-button").disabled = true;
+    try {
+      const pick = await assignArm();
+      el("mode-select").value = ARMS[pick.arm].mode;
+      selectLevel(ARMS[pick.arm].level);
+      assigned = pick.how;
+    } finally {
+      starting = false;
+      el("start-button").disabled = false;
+    }
+  } else if (!getMode()) {
+    // researcher link, no mode picked yet: open the mode overlay instead of starting
+    el("mode-overlay").classList.remove("hidden");
+    return;
+  }
+  beginGame(assigned);
+}
+
+function beginGame(assigned) {
+  // The parent's consent is for ONE game: it is used up here, so another game needs a new tick.
+  if (dataOn()) removeStore(CONSENT_KEY);
+
   state = {
     playerName: el("player-id").value.trim() || t("defaultName"),   // shown on screen only
-    playerId: "P" + Math.random().toString(36).slice(2, 8),         // anonymous, goes in the CSV
+    playerId: getPlayerId(),                                        // anonymous, the same on every game of this device, goes in the CSV
+    gameNo: nextGameNo(),                                           // 1 = the first game on this device (a learning effect shows in later games)
+    assigned: assigned,                                             // random | server | link | admin
     mode: getMode(),
     level: parseInt(el("level-select").value, 10),
     startLevel: parseInt(el("level-select").value, 10),              // decides which static leaderboard the score goes to
@@ -849,6 +931,7 @@ function finishQuestion(finalCorrect) {
 
   logQuestion(oldLevel, firstTryCorrect, finalCorrect, timeMs, features, decision, shadow);
   saveLog();
+  queueData(false);                              // online data return (does nothing while DATA_URL is empty)
 
   // After a level change, start a fresh window so the next decision
   // is based on answers given at the new level only.
@@ -866,6 +949,7 @@ function endGame(quit) {
 
   if (!quit) log.forEach(row => { row.session_completed = 1; });
   saveLog();
+  queueData(!quit);                              // sends what is left; "done" tells the sheet the game was finished
 
   el("game-screen").classList.add("hidden");
   el("quit-button").classList.add("hidden");
@@ -890,6 +974,9 @@ function endGame(quit) {
   el("end-board-title").textContent = t("boardTitle", { board: boardLabel(board) });
   renderBoard(el("end-board-list"), board, quit ? null : state.sessionId);
   state.board = board;
+  // Online data ON: show the participation code, so a parent can ask for the answers to be deleted later
+  el("end-code").classList.toggle("hidden", !dataOn());
+  if (dataOn()) el("end-code").innerHTML = t("codeLine", { code: state.playerId });
   say(endLine(correct, state.playerName), "happy");
   confetti(window.innerWidth / 2, window.innerHeight / 3, 70);
   sfx("end");
@@ -931,7 +1018,11 @@ function logQuestion(level, firstTryCorrect, finalCorrect, timeMs, features, dec
     device: deviceInfo(),
     timestamp: new Date().toISOString(),
     build: BUILD,
-    session_completed: 0                         // becomes 1 when all questions were answered
+    session_completed: 0,                        // becomes 1 when all questions were answered
+    // --- added in build 2026-11-23-v4b ---
+    game_no: state.gameNo,                       // 1 = first game on this device
+    start_level: state.startLevel,
+    assigned: state.assigned                     // random | server (balanced by the sheet) | link | admin
   });
 }
 
@@ -1043,28 +1134,117 @@ function saveBoards(data) {
 }
 
 // best first: higher score, then shorter time, then earlier game
+function compareEntries(a, b) {
+  return (Number(b.score) || 0) - (Number(a.score) || 0) ||
+         (Number(a.timeMs) || 0) - (Number(b.timeMs) || 0) ||
+         String(a.date).localeCompare(String(b.date));
+}
+
 function sortedBoard(key) {
   const list = Array.isArray(loadBoards()[key]) ? loadBoards()[key] : [];
-  return list.slice().sort((a, b) =>
-    (Number(b.score) || 0) - (Number(a.score) || 0) ||
-    (Number(a.timeMs) || 0) - (Number(b.timeMs) || 0) ||
-    String(a.date).localeCompare(String(b.date)));
+  return list.slice().sort(compareEntries);
 }
 
 function addBoardEntry(key, entry) {
   const data = Object.assign({}, loadBoards());
   const list = Array.isArray(data[key]) ? data[key].slice() : [];
-  list.push(entry);
-  data[key] = list.sort((a, b) =>
-    b.score - a.score || a.timeMs - b.timeMs || String(a.date).localeCompare(String(b.date))
-  ).slice(0, BOARD_MAX);
+  // with the shared board ON, a new score waits ("pending") until it has reached the Sheet
+  list.push(Object.assign({}, entry, LEADERBOARD_URL ? { pending: true } : {}));
+  data[key] = list.sort(compareEntries).slice(0, BOARD_MAX);
   saveBoards(data);
 }
 
+
+/* --- shared online board (only used when LEADERBOARD_URL is filled in) --- */
+
+function fetchWithTimeout(url, options, ms) {
+  const opts = Object.assign({}, options);
+  if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) opts.signal = AbortSignal.timeout(ms || ONLINE_TIMEOUT_MS);
+  return fetch(url, opts);
+}
+
+function markUploaded(key, id) {
+  const data = Object.assign({}, loadBoards());
+  const list = Array.isArray(data[key]) ? data[key].map(e => {
+    if (e.id !== id) return e;
+    const copy = Object.assign({}, e); delete copy.pending; return copy;
+  }) : [];
+  data[key] = list;
+  saveBoards(data);
+}
+
+// Sends every waiting score to the Sheet, one by one. Offline? Stop quietly; it is retried next time.
+// The Sheet ignores a score whose id it already has, so sending twice never makes a double entry.
+let uploadPromise = null;
+function uploadPending() {
+  if (!LEADERBOARD_URL) return Promise.resolve();
+  if (uploadPromise) return uploadPromise;
+  uploadPromise = (async () => {
+    const data = loadBoards();
+    for (const key of Object.keys(data)) {
+      for (const entry of (Array.isArray(data[key]) ? data[key] : [])) {
+        if (!entry.pending) continue;
+        try {
+          const res = await fetchWithTimeout(LEADERBOARD_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },   // a "simple" request: no pre-flight needed
+            body: JSON.stringify({ board: key, id: entry.id, name: entry.name, score: entry.score,
+                                   total: entry.total, timeMs: entry.timeMs, date: entry.date })
+          });
+          const reply = await res.json();
+          // ok, or refused for good (bad values): either way stop retrying this one
+          if (reply && (reply.ok || reply.error === "board" || reply.error === "values")) markUploaded(key, entry.id);
+        } catch (e) { return; }
+      }
+    }
+  })().finally(() => { uploadPromise = null; });
+  return uploadPromise;
+}
+
+async function fetchRemoteBoard(key) {
+  const res = await fetchWithTimeout(`${LEADERBOARD_URL}?board=${encodeURIComponent(key)}&limit=${BOARD_MAX}`);
+  const data = await res.json();
+  if (!data || !data.ok || !Array.isArray(data.rows)) throw new Error("bad reply");
+  return data.rows;
+}
+
+function setBoardStatus(listEl, text) {
+  const status = el(listEl.id.replace("-list", "-status"));
+  if (!status) return;
+  status.textContent = text;
+  status.classList.toggle("hidden", !text);
+}
+
 // Draws one board into an <ol>. highlightId = the game that just finished (shown in yellow).
+// Local scores appear at once; with the shared board ON they are replaced by the shared list a moment later.
 function renderBoard(listEl, key, highlightId) {
+  const token = (listEl._token = (listEl._token || 0) + 1);      // an older, slower answer must not overwrite a newer tab
+  const local = sortedBoard(key);
+  if (LEADERBOARD_URL && local.length === 0) listEl.innerHTML = "";
+  else renderBoardRows(listEl, local, highlightId);
+  if (!LEADERBOARD_URL) { setBoardStatus(listEl, ""); return Promise.resolve(); }
+
+  setBoardStatus(listEl, t("boardLoading"));
+  return (async () => {
+    try {
+      await uploadPending();
+      const remote = await fetchRemoteBoard(key);
+      if (listEl._token !== token) return;
+      const have = new Set(remote.map(r => String(r.id)));
+      const waiting = sortedBoard(key).filter(r => r.pending && !have.has(String(r.id)));   // not uploaded yet
+      renderBoardRows(listEl, remote.concat(waiting).sort(compareEntries), highlightId);
+      setBoardStatus(listEl, "");
+    } catch (e) {
+      if (listEl._token === token) {
+        renderBoardRows(listEl, local, highlightId);
+        setBoardStatus(listEl, t("boardOffline"));
+      }
+    }
+  })();
+}
+
+function renderBoardRows(listEl, rows, highlightId) {
   listEl.innerHTML = "";
-  const rows = sortedBoard(key);
   if (rows.length === 0) {
     const li = document.createElement("li");
     li.className = "lb-empty";
@@ -1110,11 +1290,16 @@ function renderBoard(listEl, key, highlightId) {
 }
 
 // The leaderboard window (opened from the start screen or the end screen)
+// Tabs shown: only the versions that are handed out (the researcher sees all five), plus the board being opened.
+function visibleBoards(openKey) {
+  return BOARDS.filter(b => ADMIN || ARM_KEYS.includes(b.key) || b.key === openKey);
+}
+
 function showBoardTab(key) {
   currentBoard = key;
   const tabs = el("board-tabs");
   tabs.innerHTML = "";
-  BOARDS.forEach(b => {
+  visibleBoards(key).forEach(b => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "board-tab" + (b.key === key ? " selected" : "");
@@ -1141,6 +1326,158 @@ function clearBoards() {
   if (!confirm(t("boardsClearAsk"))) return;
   saveBoards({});
   showBoardTab(currentBoard);
+}
+
+
+/* ---------- 8c. RANDOM ASSIGNMENT AND ONLINE DATA RETURN ----------
+   RANDOM ASSIGNMENT: a plain link gives every game one of the 5 versions in ARMS.
+     With DATA_URL on, the sheet names the version that has had the fewest children so far
+     (balanced random: no version is ahead by more than one; ties are drawn at random).
+     Offline, or if the sheet is slow, the game draws at random itself ("random" in the assigned column).
+   ONLINE DATA: with DATA_URL set, every answer row goes to the sheet right after the answer (no typed name).
+     Rows wait in an outbox in this browser until the sheet confirms them, so a bad connection loses nothing.
+     The sheet ignores a row it already has, so sending twice never makes a double row.
+     Nothing is sent in researcher mode (?admin=1), so your own testing does not mix into the real data. */
+
+const PLAYER_KEY = "mathgame_player";            // anonymous random id of this device (no name, no personal data)
+const GAMES_KEY = "mathgame_games";              // how many games were started on this device
+const CONSENT_KEY = "mathgame_consent";          // "1" once the consent box was ticked on this device
+const OUTBOX_KEY = "mathgame_outbox";            // { sessionId: { sent, done, doneSent } }  rows the sheet has not confirmed yet
+let outboxMem = {};                              // fallback if the browser blocks storage
+
+function dataOn() { return !!DATA_URL && !ADMIN; }
+
+function getPlayerId() {
+  let id = readStore(PLAYER_KEY);
+  if (!id || !/^P[a-z0-9]{4,10}$/.test(id)) {
+    id = "P" + Math.random().toString(36).slice(2, 8).padEnd(6, "0");
+    writeStore(PLAYER_KEY, id);
+  }
+  return id;
+}
+
+function nextGameNo() {
+  const n = (parseInt(readStore(GAMES_KEY), 10) || 0) + 1;
+  writeStore(GAMES_KEY, String(n));
+  return n;
+}
+
+function consentGiven() {
+  if (readStore(CONSENT_KEY) === "1") return true;
+  if (el("consent-check").checked) { writeStore(CONSENT_KEY, "1"); return true; }
+  return false;
+}
+
+function randomArm() {
+  return ARM_KEYS[Math.floor(Math.random() * ARM_KEYS.length)];
+}
+
+// Which version does this game get?  -> { arm: "static_2", how: "single" | "server" | "random" }
+async function assignArm() {
+  if (ARM_KEYS.length === 1) return { arm: ARM_KEYS[0], how: "single" };      // one version only: nothing to draw or balance
+  if (dataOn()) {
+    try {
+      const res = await fetchWithTimeout(`${DATA_URL}?action=assign`, {}, ASSIGN_TIMEOUT_MS);
+      const reply = await res.json();
+      if (reply && reply.ok && ARM_KEYS.includes(reply.arm)) return { arm: reply.arm, how: "server" };
+    } catch (e) { /* offline or slow: draw at random on this device */ }
+  }
+  return { arm: randomArm(), how: "random" };
+}
+
+function loadOutbox() {
+  const raw = readStore(OUTBOX_KEY);
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      if (data && typeof data === "object" && !Array.isArray(data)) return data;
+    } catch (e) { /* damaged entry: start again */ }
+  }
+  return outboxMem;
+}
+
+function saveOutbox(box) {
+  outboxMem = box;
+  writeStore(OUTBOX_KEY, JSON.stringify(box));
+}
+
+// the rows of one game: the running game from memory, older games from the browser's saved sessions
+function sessionRows(id) {
+  if (state && state.sessionId === id) return log;
+  try {
+    const rows = JSON.parse(readStore(SAVE_PREFIX + id));
+    return Array.isArray(rows) ? rows : [];
+  } catch (e) { return []; }
+}
+
+// Called after every answer and at the end of a game. completed = all questions were answered.
+function queueData(completed) {
+  if (!dataOn() || !state.sessionId) return Promise.resolve();
+  const box = Object.assign({}, loadOutbox());
+  const item = Object.assign({ sent: 0, done: 0, doneSent: 0 }, box[state.sessionId]);
+  if (completed) item.done = 1;
+  box[state.sessionId] = item;
+  saveOutbox(box);
+  return sendData();
+}
+
+// Sends everything the sheet has not confirmed yet, game by game. Offline? Stop quietly; it is retried later.
+let dataPromise = null;
+let dataAgain = false;
+function sendData() {
+  if (!dataOn()) return Promise.resolve();
+  if (dataPromise) { dataAgain = true; return dataPromise; }      // an answer came in while sending: go round once more
+  dataPromise = (async () => {
+    do {
+      dataAgain = false;
+      const box = loadOutbox();
+      for (const id of Object.keys(box)) {
+        const item = Object.assign({ sent: 0, done: 0, doneSent: 0 }, box[id]);
+        const rows = sessionRows(id);
+        const fresh = rows.slice(item.sent);
+        const needDone = !!item.done && !item.doneSent;
+        const finished = !state || state.sessionId !== id || state.ended;      // no more rows will be added to this game
+        if (fresh.length === 0 && !needDone) {
+          if (finished) { const b = Object.assign({}, loadOutbox()); delete b[id]; saveOutbox(b); }   // all confirmed (or nothing left to send)
+          continue;
+        }
+        try {
+          const res = await fetchWithTimeout(DATA_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },    // a "simple" request: no pre-flight needed
+            body: JSON.stringify({ kind: "data", session_id: id, done: item.done ? 1 : 0, rows: fresh })
+          });
+          const reply = await res.json();
+          // ok, or refused for good (bad values / sheet full): either way stop retrying these rows
+          if (reply && (reply.ok || reply.error === "values" || reply.error === "full")) {
+            const b = Object.assign({}, loadOutbox());
+            const cur = Object.assign({ sent: 0, done: 0, doneSent: 0 }, b[id]);
+            cur.sent = Math.max(cur.sent, item.sent + fresh.length);
+            if (item.done) cur.doneSent = 1;
+            b[id] = cur;
+            saveOutbox(b);
+          }
+        } catch (e) { return; }
+      }
+    } while (dataAgain);
+  })().finally(() => { dataPromise = null; });
+  return dataPromise;
+}
+
+// The page is closing or hidden: hand what is still unsent to the browser (best effort; the sheet ignores repeats).
+function beaconData() {
+  if (!dataOn() || !navigator.sendBeacon) return;
+  const box = loadOutbox();
+  Object.keys(box).forEach(id => {
+    const item = Object.assign({ sent: 0, done: 0, doneSent: 0 }, box[id]);
+    const fresh = sessionRows(id).slice(item.sent);
+    if (fresh.length === 0 && !(item.done && !item.doneSent)) return;
+    try {
+      navigator.sendBeacon(DATA_URL, new Blob(
+        [JSON.stringify({ kind: "data", session_id: id, done: item.done ? 1 : 0, rows: fresh })],
+        { type: "text/plain;charset=utf-8" }));
+    } catch (e) { /* nothing more to do */ }
+  });
 }
 
 
@@ -1242,15 +1579,22 @@ function selectLevel(level) {
 // Apply what the link says (child links hide the pickers)
 function setupFromLink() {
   if (URL_MODE) el("mode-select").value = URL_MODE;
-  if (URL_LEVEL) selectLevel(URL_LEVEL);
+  if (URL_LEVEL && !RANDOM_ASSIGN) selectLevel(URL_LEVEL);
 
-  el("mode-row").classList.toggle("hidden", !!URL_MODE && !ADMIN);
-  el("level-row").classList.toggle("hidden", !!URL_LEVEL && !ADMIN);
+  // random assignment decides mode and level, so a child never sees the pickers
+  el("mode-row").classList.toggle("hidden", RANDOM_ASSIGN || (!!URL_MODE && !ADMIN));
+  el("level-row").classList.toggle("hidden", RANDOM_ASSIGN || (!!URL_LEVEL && !ADMIN));
   el("lang-button").classList.toggle("hidden", !!URL_LANG && !ADMIN);
   el("admin-box").classList.toggle("hidden", !ADMIN);
   el("download-button").classList.toggle("hidden", !ADMIN);
   el("download-all-button").classList.toggle("hidden", !ADMIN);
   el("boards-clear").classList.toggle("hidden", !ADMIN);
+
+  // consent box: only when online data is ON, and only until it was ticked once on this device
+  el("consent-row").classList.toggle("hidden", !dataOn() || readStore(CONSENT_KEY) === "1");
+  el("admin-online").textContent = !DATA_URL
+    ? "Online data: OFF (DATA_URL is empty in game.js)."
+    : "Online data: sending is paused in researcher mode. Use the plain link to test it.";
 
   if (!("speechSynthesis" in window)) el("speak-button").classList.add("hidden");
   refreshSavedCount();
@@ -1267,6 +1611,8 @@ function closeTopOverlay() {
 buildBackground();
 setupFromLink();
 applyLang();
+uploadPending();                                 // scores that could not be sent last time (shared board only)
+sendData();                                      // answers that could not be sent last time (online data only)
 
 el("start-button").addEventListener("click", startGame);
 el("download-button").addEventListener("click", downloadCSV);
@@ -1357,4 +1703,6 @@ document.addEventListener("keydown", e => {
 // If the child switches to another tab, remember that this question's time is not reliable
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && state.question && !state.ended) state.interrupted = true;
+  if (document.hidden) beaconData();             // tab hidden or closing: hand unsent answers to the browser
 });
+window.addEventListener("pagehide", beaconData);
