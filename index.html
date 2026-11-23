@@ -1,209 +1,269 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" dir="ltr" data-ui="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Math Adventure</title>
+  <title>Math Adventure - a maths game and a university research project</title>
+  <meta name="description" content="Mohamed Haitham, Business Informatics student at the German International University (GIU), invites your child to try a 3 to 5 minute maths game for his bachelor thesis.">
+  <meta name="robots" content="noindex">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Math Adventure - a maths game for children (GIU research project)">
+  <meta property="og:description" content="A 3 to 5 minute maths game for my bachelor thesis at GIU. Parents: read the details and give your OK first. | لعبة رياضيات من 3 إلى 5 دقائق لمشروع تخرجي في الجامعة الألمانية الدولية.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <style>
+    :root {
+      --sky1: #bde3ff; --sky2: #ffe3f1;
+      --blue: #4d7cff; --blue-d: #2f55c9;
+      --green: #2ec27e; --green-d: #1c9a60;
+      --yellow: #ffd23f; --yellow-d: #e0ac00;
+      --ink: #2b2d5b; --muted: #5d6090;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 16px 16px 40px;
+      font-family: "Fredoka", "Cairo", "Trebuchet MS", Arial, sans-serif;
+      font-size: 17px; line-height: 1.6; color: var(--ink);
+      background: linear-gradient(160deg, var(--sky1) 0%, var(--sky2) 100%);
+      background-attachment: fixed; min-height: 100vh;
+    }
+    html[dir="rtl"] body { font-family: "Cairo", "Fredoka", Arial, sans-serif; }
+    .hidden { display: none !important; }
+    /* one language at a time: every text exists twice, lang="en" and lang="ar" */
+    html[data-ui="en"] [lang="ar"], html[data-ui="ar"] [lang="en"] { display: none !important; }
+
+    .wrap { max-width: 640px; margin: 0 auto; }
+    .top { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+    .lang-btn {
+      min-height: 44px; padding: 8px 18px; font: inherit; font-weight: 700; color: var(--blue-d);
+      background: #fff; border: 3px solid var(--blue); border-radius: 999px; box-shadow: 0 4px 0 var(--blue-d); cursor: pointer;
+    }
+    .lang-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--blue-d); }
+
+    .card {
+      position: relative; background: #fff; border-radius: 28px; padding: 34px 22px 26px; margin-bottom: 18px;
+      box-shadow: 0 10px 0 rgba(77, 124, 255, 0.22), 0 20px 34px rgba(43, 45, 91, 0.14);
+    }
+    .hero { text-align: center; padding-top: 38px; }
+    .hero::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 16px; border-radius: 28px 28px 0 0;
+      background: var(--yellow);
+      background-image: repeating-linear-gradient(90deg, transparent 0 14px, rgba(43,45,91,0.35) 14px 16px);
+      background-size: 100% 8px; background-repeat: no-repeat; background-position: bottom;
+    }
+    .mascot { width: 96px; height: 96px; margin: 0 auto 6px; }
+    h1 {
+      margin: 4px 0 4px; font-size: 40px; line-height: 1.2; font-weight: 700;
+      background: linear-gradient(90deg, #ff5d8f, #ff9f1c, #2ec27e, #4d7cff, #9b5de5);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .sub { margin: 0; color: var(--muted); font-size: 18px; }
+    h2 { margin: 0 0 10px; font-size: 24px; line-height: 1.3; color: var(--blue-d); }
+    p { margin: 0 0 12px; }
+    p:last-child { margin-bottom: 0; }
+    ul { margin: 0 0 12px; padding-inline-start: 22px; }
+    li { margin-bottom: 6px; }
+    .two { display: grid; gap: 12px; }
+    .box { padding: 14px 16px; border-radius: 16px; background: #eef3ff; border: 2px solid #cfdcff; }
+    .box h3 { margin: 0 0 6px; font-size: 18px; }
+    .box.no { background: #fff4e0; border-color: #ffd9a0; }
+    .small { font-size: 15px; color: var(--muted); }
+
+    .consent {
+      display: flex; align-items: flex-start; gap: 14px; padding: 16px; margin-top: 8px; cursor: pointer;
+      background: #eef3ff; border: 3px solid var(--blue); border-radius: 18px; font-weight: 500; line-height: 1.55;
+    }
+    .consent input { flex: 0 0 auto; width: 30px; height: 30px; margin: 2px 0 0; accent-color: var(--green-d); cursor: pointer; }
+    .consent.shake { animation: shake 0.5s ease; }
+    @keyframes shake { 0%,100% { transform: none; } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+    .go {
+      display: block; width: 100%; margin-top: 16px; min-height: 58px; padding: 14px 22px; font: inherit; font-size: 22px; font-weight: 700;
+      color: #fff; background: var(--green); border: 0; border-radius: 18px; box-shadow: 0 6px 0 var(--green-d); cursor: pointer;
+    }
+    .go:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 var(--green-d); }
+    .go:disabled { background: #b9c2d6; box-shadow: 0 6px 0 #98a2bb; cursor: not-allowed; }
+    .hint { margin: 10px 0 0; text-align: center; color: var(--muted); font-size: 15px; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 4px solid var(--yellow-d); outline-offset: 3px; }
+    a { color: var(--blue-d); font-weight: 600; }
+    @media (prefers-reduced-motion: reduce) { .consent.shake { animation: none; } }
+    @media (max-width: 420px) { h1 { font-size: 32px; } h2 { font-size: 21px; } .card { padding: 32px 16px 22px; } }
+  </style>
 </head>
 <body>
-  <!-- floating math symbols and confetti layers (filled by game.js) -->
-  <div id="bg" aria-hidden="true"></div>
-  <div id="fx" aria-hidden="true"></div>
+<div class="wrap">
 
-  <!-- language and sound buttons -->
-  <div id="tools">
-    <button id="quit-button" class="tool-btn tool-quit hidden" type="button" data-i18n-aria="quitAria">✕</button>
-    <button id="lang-button" class="tool-btn" type="button" data-i18n-aria="langAria">عربي</button>
-    <button id="mute-button" class="tool-btn" type="button" aria-pressed="false" data-i18n-aria="soundAria">🔊</button>
+  <div class="top">
+    <button id="lang-btn" class="lang-btn" type="button">
+      <span lang="en">عربي</span><span lang="ar">English</span>
+    </button>
   </div>
 
-  <main class="card">
+  <noscript>
+    <div class="card"><p>Please turn on JavaScript to use this page and the game. / من فضلك فعّل JavaScript.</p></div>
+  </noscript>
 
-    <!-- Mascot (shared by all screens) -->
-    <div class="mascot-row">
-      <div id="mascot" aria-hidden="true">
-        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-          <line x1="60" y1="26" x2="60" y2="12" stroke="#2f55c9" stroke-width="5" stroke-linecap="round"/>
-          <circle class="antenna" cx="60" cy="10" r="7" fill="#ffd23f" stroke="#e0ac00" stroke-width="3"/>
-          <rect x="8" y="54" width="14" height="28" rx="7" fill="#ff5d8f"/>
-          <rect x="98" y="54" width="14" height="28" rx="7" fill="#ff5d8f"/>
-          <rect x="16" y="26" width="88" height="82" rx="32" fill="#4d7cff" stroke="#2f55c9" stroke-width="4"/>
-          <rect x="28" y="38" width="64" height="56" rx="24" fill="#eef3ff"/>
-          <text x="60" y="48" text-anchor="middle" font-size="10" font-weight="700" fill="#4d7cff" font-family="Arial, sans-serif">+ − ×</text>
-          <g class="eye">
-            <ellipse cx="46" cy="62" rx="9" ry="11" fill="#fff" stroke="#2b2d5b" stroke-width="3"/>
-            <circle cx="48" cy="64" r="5" fill="#2b2d5b"/>
-            <circle cx="50" cy="61" r="1.8" fill="#fff"/>
-          </g>
-          <g class="eye">
-            <ellipse cx="74" cy="62" rx="9" ry="11" fill="#fff" stroke="#2b2d5b" stroke-width="3"/>
-            <circle cx="76" cy="64" r="5" fill="#2b2d5b"/>
-            <circle cx="78" cy="61" r="1.8" fill="#fff"/>
-          </g>
-          <circle cx="37" cy="80" r="5" fill="#ffb3c7"/>
-          <circle cx="83" cy="80" r="5" fill="#ffb3c7"/>
-          <path class="m-smile" d="M49 80 Q60 92 71 80" fill="none" stroke="#2b2d5b" stroke-width="4" stroke-linecap="round"/>
-          <path class="m-big" d="M47 78 Q60 100 73 78 Z" fill="#2b2d5b" stroke="#2b2d5b" stroke-width="3" stroke-linejoin="round"/>
-          <path class="m-oops" d="M50 89 Q60 79 70 89" fill="none" stroke="#2b2d5b" stroke-width="4" stroke-linecap="round"/>
-        </svg>
+  <!-- ===== Hero ===== -->
+  <header class="card hero">
+    <svg class="mascot" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="60" y1="26" x2="60" y2="12" stroke="#2f55c9" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="60" cy="10" r="7" fill="#ffd23f" stroke="#e0ac00" stroke-width="3"/>
+      <rect x="8" y="54" width="14" height="28" rx="7" fill="#ff5d8f"/>
+      <rect x="98" y="54" width="14" height="28" rx="7" fill="#ff5d8f"/>
+      <rect x="16" y="26" width="88" height="82" rx="32" fill="#4d7cff" stroke="#2f55c9" stroke-width="4"/>
+      <rect x="28" y="38" width="64" height="56" rx="24" fill="#eef3ff"/>
+      <text x="60" y="48" text-anchor="middle" font-size="10" font-weight="700" fill="#4d7cff" font-family="Arial, sans-serif">+ − ×</text>
+      <ellipse cx="46" cy="62" rx="9" ry="11" fill="#fff" stroke="#2b2d5b" stroke-width="3"/><circle cx="48" cy="64" r="5" fill="#2b2d5b"/><circle cx="50" cy="61" r="1.8" fill="#fff"/>
+      <ellipse cx="74" cy="62" rx="9" ry="11" fill="#fff" stroke="#2b2d5b" stroke-width="3"/><circle cx="76" cy="64" r="5" fill="#2b2d5b"/><circle cx="78" cy="61" r="1.8" fill="#fff"/>
+      <circle cx="37" cy="80" r="5" fill="#ffb3c7"/><circle cx="83" cy="80" r="5" fill="#ffb3c7"/>
+      <path d="M49 80 Q60 92 71 80" fill="none" stroke="#2b2d5b" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <h1><span lang="en">Math Adventure</span><span lang="ar">مغامرة الرياضيات</span></h1>
+    <p class="sub">
+      <span lang="en">A maths game for children, and a small university research project</span>
+      <span lang="ar">لعبة رياضيات للأطفال، ومشروع بحثي جامعي صغير</span>
+    </p>
+  </header>
+
+  <!-- ===== Who I am ===== -->
+  <section class="card" id="who">
+    <h2><span lang="en">Who I am</span><span lang="ar">من أنا</span></h2>
+    <p lang="en">Hello! I'm <strong>Mohamed Haitham</strong>, a <strong>Business Informatics</strong> student at the <strong>German International University (GIU)</strong>. This game is part of my bachelor thesis.</p>
+    <p lang="ar">مرحباً! أنا <strong>محمد هيثم</strong>، طالب بكالوريوس في <strong>معلوماتية الأعمال (Business Informatics)</strong> في <strong>الجامعة الألمانية الدولية (GIU)</strong>. هذه اللعبة جزء من مشروع تخرّجي.</p>
+  </section>
+
+  <!-- ===== My topic ===== -->
+  <section class="card" id="topic">
+    <h2><span lang="en">My topic</span><span lang="ar">موضوع بحثي</span></h2>
+    <p lang="en">My thesis is about <strong>educational games that adjust their difficulty to each child</strong>. A game that is too easy gets boring, and a game that is too hard makes children give up.</p>
+    <p lang="en">I am testing a simple formula that looks at a child's last 3 answers (were they right? how fast? was a retry needed?) and decides whether the next questions should be easier, the same, or harder. To check how well the formula fits real children, I need to see how real children answer.</p>
+    <p lang="ar">يدور بحثي حول <strong>الألعاب التعليمية التي تضبط مستوى صعوبتها وفق كل طفل</strong>. اللعبة السهلة جداً تصبح مملّة، والصعبة جداً تجعل الطفل يستسلم.</p>
+    <p lang="ar">أختبر معادلة بسيطة تنظر إلى آخر 3 إجابات للطفل (هل كانت صحيحة؟ وما سرعتها؟ وهل احتاج إلى محاولة ثانية؟) ثم تقرر إن كانت الأسئلة التالية أسهل أو بنفس المستوى أو أصعب. ولأعرف مدى توافق المعادلة مع الأطفال الحقيقيين، أحتاج إلى رؤية كيف يجيب الأطفال فعلاً.</p>
+  </section>
+
+  <!-- ===== About the game ===== -->
+  <section class="card" id="game">
+    <h2><span lang="en">About the game</span><span lang="ar">عن اللعبة</span></h2>
+    <ul lang="en">
+      <li><strong>12 short maths questions</strong> (adding, subtracting and multiplying). Each question has 4 answer buttons, and one retry if the first answer is wrong.</li>
+      <li>It takes about <strong>3 to 5 minutes</strong>. It works on a phone, tablet or computer, in English or Arabic.</li>
+      <li>While your child plays, the game changes the level of the questions (easy, medium, hard) by itself. At the end your child sees their stars.</li>
+      <li>No ads, no purchases and no account.</li>
+    </ul>
+    <ul lang="ar">
+      <li><strong>12 سؤالاً قصيراً</strong> في الجمع والطرح والضرب. لكل سؤال 4 اختيارات، ومحاولة ثانية واحدة إذا كانت الإجابة الأولى خاطئة.</li>
+      <li>تستغرق نحو <strong>3 إلى 5 دقائق</strong>، وتعمل على الهاتف أو التابلت أو الكمبيوتر، بالإنجليزية أو بالعربية.</li>
+      <li>أثناء اللعب تغيّر اللعبة مستوى الأسئلة (سهل، متوسط، صعب) تلقائياً. وفي النهاية يرى طفلكم نجومه.</li>
+      <li>لا إعلانات ولا مشتريات ولا حسابات.</li>
+    </ul>
+  </section>
+
+  <!-- ===== What I collect ===== -->
+  <section class="card" id="data">
+    <h2><span lang="en">What I collect, and what I don't</span><span lang="ar">ما أجمعه وما لا أجمعه</span></h2>
+    <div class="two">
+      <div class="box" lang="en">
+        <h3>I collect</h3>
+        <p>For each question: its level, whether the answer was right on the first try, whether a retry was needed, and how many seconds it took.</p>
+        <p>Also: the kind of device (touch or mouse, screen size), the language, the time of play, and a random code that is not linked to any name.</p>
       </div>
-      <div id="bubble" class="bubble" data-i18n="hi">Hi! I'm Numo. Let's do some math!</div>
-    </div>
-
-    <!-- Screen 1: start -->
-    <section id="start-screen">
-
-      <!-- only visible with ?admin=1 -->
-      <div id="admin-box" class="admin-box hidden">
-        <div class="admin-tag">🔧 Researcher mode</div>
-        <button id="download-all-start" type="button" class="btn btn-blue small">📦 Download ALL saved sessions (<span id="saved-count">0</span>)</button>
+      <div class="box no" lang="en">
+        <h3>I do NOT collect</h3>
+        <p>Your child's name (a nickname typed in the game stays on the device and is never sent), email, phone number, photos, voice or location.</p>
       </div>
-
-      <h1 class="title rainbow" data-i18n="appName">Math Adventure</h1>
-      <p class="subtitle" data-i18n="subtitle">Answer the questions and collect your stars!</p>
-
-      <label for="player-id" data-i18n="nameLabel">What's your name?</label>
-      <input id="player-id" data-i18n-ph="namePh" placeholder="Your name or nickname" maxlength="15" autocomplete="off">
-
-      <div id="mode-row">
-        <label data-i18n="modeLabel">Game mode</label>
-        <input type="hidden" id="mode-select" value="">
-        <button id="select-mode-button" type="button" class="btn btn-purple wide">🎮 Select mode</button>
+      <div class="box" lang="ar">
+        <h3>ما أجمعه</h3>
+        <p>عن كل سؤال: مستواه، وهل كانت الإجابة صحيحة من المحاولة الأولى، وهل احتاج الطفل إلى محاولة ثانية، وكم ثانية استغرق.</p>
+        <p>وأيضاً: نوع الجهاز (لمس أو ماوس، وحجم الشاشة)، واللغة، ووقت اللعب، ورمز عشوائي غير مرتبط بأي اسم.</p>
       </div>
-
-      <div id="level-row">
-        <label data-i18n="levelLabel">Starting level</label>
-        <input type="hidden" id="level-select" value="2">
-        <div class="level-chips">
-          <button type="button" class="chip chip-1" data-level="1" data-i18n="easy">🌱 Easy</button>
-          <button type="button" class="chip chip-2 selected" data-level="2" data-i18n="medium">⭐ Medium</button>
-          <button type="button" class="chip chip-3" data-level="3" data-i18n="hard">🔥 Hard</button>
-        </div>
-      </div>
-
-      <button id="start-button" type="button" class="btn btn-green big" data-i18n="start">▶ Start</button>
-      <button id="boards-open" type="button" class="btn btn-blue wide boards-btn" data-i18n="boardsBtn">🏆 Leaderboards</button>
-    </section>
-
-    <!-- Screen 2: game -->
-    <section id="game-screen" class="hidden">
-      <div class="topbar">
-        <span id="q-count" class="pill"></span>
-        <span id="stars" class="pill pill-star">⭐ 0</span>
-        <span id="level-badge" class="badge"></span>
-      </div>
-
-      <div class="track">
-        <div id="progress-fill"></div>
-        <span id="rocket" class="rocket"><span>🚀</span></span>
-        <span class="goal">🪐</span>
-      </div>
-
-      <div id="question-card">
-        <div id="question"></div>
-        <button id="speak-button" type="button" class="speak-btn" data-i18n-aria="speakAria">🔈</button>
-      </div>
-      <div id="options"></div>
-      <div id="message" role="status" aria-live="polite"></div>
-    </section>
-
-    <!-- Screen 3: end -->
-    <section id="end-screen" class="hidden">
-      <div class="trophy">🏆</div>
-      <h1 class="title rainbow" data-i18n="wellDone">Well done!</h1>
-      <div id="stars-row"></div>
-      <div id="summary"></div>
-
-      <!-- leaderboard of the mode that was just played -->
-      <h2 id="end-board-title" class="lb-title"></h2>
-      <ol id="end-board-list" class="lb-list"></ol>
-      <p class="lb-note" data-i18n="boardNote">Only finished games count. Same score? The faster player ranks higher.</p>
-
-      <div class="buttons">
-        <button id="again-button" type="button" class="btn btn-green" data-i18n="playAgain">🔄 Play again</button>
-        <button id="boards-open-end" type="button" class="btn btn-purple" data-i18n="boardsAll">🏆 All leaderboards</button>
-        <button id="download-button" type="button" class="btn btn-blue hidden" data-i18n="download">📥 Download this session (CSV)</button>
-        <button id="download-all-button" type="button" class="btn btn-blue hidden" data-i18n="downloadAll">📦 Download ALL saved sessions</button>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Mode selection overlay -->
-  <div id="mode-overlay" class="overlay hidden">
-    <div class="mode-panel">
-      <h2 data-i18n="chooseMode">Choose your game mode 🎮</h2>
-      <div class="mode-cards">
-
-        <div class="mode-wrap">
-          <button type="button" class="mode-card" data-mode="static">
-            <span class="mode-icon">🧊</span>
-            <span class="mode-title" data-i18n="mode_static">Static</span>
-            <span class="mode-info" data-i18n="info_static">The difficulty never changes.</span>
-          </button>
-        </div>
-
-        <div class="mode-wrap">
-          <button type="button" class="mode-card" data-mode="rule">
-            <span class="mode-icon">📏</span>
-            <span class="mode-title" data-i18n="mode_rule">Rule-based</span>
-            <span class="mode-info" data-i18n="info_rule">Simple rules.</span>
-          </button>
-        </div>
-
-        <div class="mode-wrap">
-          <button type="button" class="mode-card" data-mode="predictive">
-            <span class="mode-icon">🔮</span>
-            <span class="mode-title" data-i18n="mode_predictive">Predictive</span>
-            <span class="mode-info" data-i18n="info_predictive">A small model.</span>
-          </button>
-          <button type="button" id="info-button" class="info-btn" data-i18n-aria="infoAria">i</button>
-        </div>
-
-      </div>
-      <button type="button" id="mode-close" class="btn btn-grey" data-i18n="cancel">Cancel</button>
-    </div>
-  </div>
-
-  <!-- Predictive mode explanation overlay -->
-  <div id="info-overlay" class="overlay hidden">
-    <div class="mode-panel info-panel">
-      <h2 data-i18n="infoTitle">How does Predictive mode think? 🤔</h2>
-      <div id="info-content"></div>
-      <button type="button" id="info-close" class="btn btn-blue" data-i18n="gotIt">Got it!</button>
-    </div>
-  </div>
-
-  <!-- Leaderboards overlay (5 boards) -->
-  <div id="boards-overlay" class="overlay hidden">
-    <div class="mode-panel board-panel">
-      <h2 data-i18n="boardsTitle">🏆 Leaderboards</h2>
-      <div id="board-tabs" class="board-tabs"></div>
-      <ol id="board-list" class="lb-list"></ol>
-      <p class="lb-note" data-i18n="boardNote">Only finished games count. Same score? The faster player ranks higher.</p>
-      <div class="row">
-        <button type="button" id="boards-clear" class="btn btn-grey small hidden" data-i18n="boardsClear">🗑️ Clear leaderboards</button>
-        <button type="button" id="boards-close" class="btn btn-blue" data-i18n="boardsClose">Close</button>
+      <div class="box no" lang="ar">
+        <h3>ما لا أجمعه</h3>
+        <p>اسم طفلكم (اللقب الذي يكتبه في اللعبة يبقى على الجهاز ولا يُرسل أبداً)، والبريد الإلكتروني، ورقم الهاتف، والصور، والصوت، والموقع.</p>
       </div>
     </div>
-  </div>
+    <p lang="en" style="margin-top:14px"><strong>Why:</strong> to check how well the formula matches how real children answer. The results are used only for my thesis and are reported as group results, never about one child.</p>
+    <p lang="ar" style="margin-top:14px"><strong>السبب:</strong> لمعرفة مدى توافق المعادلة مع طريقة إجابة الأطفال الحقيقيين. تُستخدم النتائج لمشروع تخرّجي فقط، وتُعرض كنتائج جماعية، ولا تُعرض أبداً عن طفل بعينه.</p>
+    <p lang="en" class="small">The game is hosted on GitHub and the answers are collected in a private Google Sheet. Like any website, these services may handle technical connection data under their own policies; I do not collect or see it.</p>
+    <p lang="ar" class="small">اللعبة مستضافة على GitHub، وتُجمع الإجابات في جدول Google خاص. وكأي موقع إلكتروني، قد تعالج هذه الخدمات بيانات الاتصال التقنية وفق سياساتها الخاصة، وأنا لا أجمعها ولا أطّلع عليها.</p>
+  </section>
 
-  <!-- "Stop playing?" overlay -->
-  <div id="quit-overlay" class="overlay hidden">
-    <div class="mode-panel small">
-      <h2 data-i18n="quitTitle">Stop playing?</h2>
-      <p data-i18n="quitText">Your stars so far will be saved.</p>
-      <div class="row">
-        <button type="button" id="quit-no" class="btn btn-green" data-i18n="quitNo">Keep playing</button>
-        <button type="button" id="quit-yes" class="btn btn-grey" data-i18n="quitYes">Yes, stop</button>
-      </div>
-    </div>
-  </div>
+  <!-- ===== Your choice + consent ===== -->
+  <section class="card" id="choice">
+    <h2><span lang="en">Your choice</span><span lang="ar">قراركم</span></h2>
+    <p lang="en">Taking part is <strong>voluntary</strong>. Your child can stop at any time with the ✕ button. If you decide later that you do not want the answers used, send me the participation code shown at the end of the game and I will delete them.</p>
+    <p lang="ar">المشاركة <strong>اختيارية تماماً</strong>. يستطيع طفلكم التوقف في أي وقت بزر ✕. وإذا قررتم لاحقاً أنكم لا تريدون استخدام الإجابات، فأرسلوا لي رمز المشاركة الظاهر في نهاية اللعبة وسأحذفها.</p>
+    <!-- shown only when CONTACT_EMAIL (in the script at the bottom of this file) is filled in -->
+    <p id="contact" class="hidden">
+      <span lang="en">Questions, or a deletion request? Email me: </span><span lang="ar">للاستفسار أو لطلب الحذف، راسلوني على: </span><a id="contact-link" href="#" dir="ltr"></a>
+    </p>
 
-  <script src="game.js"></script>
+    <label class="consent" id="consent-row" for="consent">
+      <input type="checkbox" id="consent">
+      <span lang="en">I am the <strong>parent or guardian</strong> of the child who will play. I have read the information above and I agree that my child plays the game <strong>once</strong>, and that their <strong>answers, retries, accuracy and response times</strong> are collected anonymously for this research.</span>
+      <span lang="ar">أنا <strong>ولي أمر</strong> الطفل الذي سيلعب. قرأت المعلومات أعلاه، وأوافق على أن يلعب طفلي اللعبة <strong>مرة واحدة</strong>، وعلى جمع <strong>إجاباته ومحاولاته ودقّته وزمن إجابته</strong> بشكل مجهول الهوية لأغراض هذا البحث.</span>
+    </label>
+
+    <button id="go" class="go" type="button" disabled aria-describedby="hint">
+      <span lang="en">Start the game</span><span lang="ar">ابدأ اللعبة</span>
+    </button>
+    <p id="hint" class="hint" role="status">
+      <span lang="en">Please tick the box above to continue.</span><span lang="ar">من فضلك ضع علامة في المربع أعلاه للمتابعة.</span>
+    </p>
+  </section>
+
+</div>
+
+<script>
+  // ---- Settings ----
+  const CONTACT_EMAIL = "";            // put your GIU email between the quotes; it is then shown to parents on this page
+  const GAME_PAGE = "play.html";       // the game
+  const CONSENT_KEY = "mathgame_consent";   // the game reads this: "1" = a parent ticked the box (used up when a game starts)
+  const LANG_KEY = "mathgame_lang";
+
+  const $ = id => document.getElementById(id);
+  const read = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const write = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked: the game asks again */ } };
+
+  // ---- Language: link (?lang=ar), then the saved choice, then the phone's language ----
+  function pickLang() {
+    const fromLink = new URLSearchParams(location.search).get("lang");
+    if (fromLink === "ar" || fromLink === "en") return fromLink;
+    const saved = read(LANG_KEY);
+    if (saved === "ar" || saved === "en") return saved;
+    return /^ar/i.test(navigator.language || "") ? "ar" : "en";
+  }
+  function setLang(l) {
+    const root = document.documentElement;
+    root.setAttribute("data-ui", l); root.lang = l; root.dir = l === "ar" ? "rtl" : "ltr";
+    write(LANG_KEY, l);
+    document.title = l === "ar" ? "مغامرة الرياضيات - لعبة رياضيات ومشروع بحثي جامعي" : "Math Adventure - a maths game and a university research project";
+  }
+  setLang(pickLang());
+  $("lang-btn").addEventListener("click", () => setLang(document.documentElement.getAttribute("data-ui") === "ar" ? "en" : "ar"));
+
+  // ---- Contact (only when filled in) ----
+  if (CONTACT_EMAIL) {
+    $("contact-link").textContent = CONTACT_EMAIL;
+    $("contact-link").href = "mailto:" + CONTACT_EMAIL;
+    $("contact").classList.remove("hidden");
+  }
+
+  // ---- Consent: the button works only after the box is ticked ----
+  const box = $("consent"), go = $("go"), hint = $("hint");
+  function refresh() {
+    go.disabled = !box.checked;
+    hint.classList.toggle("hidden", box.checked);
+  }
+  box.addEventListener("change", refresh);
+  refresh();
+  go.addEventListener("click", () => {
+    if (!box.checked) {                 // (the button is disabled, this is only a safety net)
+      const row = $("consent-row"); row.classList.remove("shake"); void row.offsetWidth; row.classList.add("shake");
+      return;
+    }
+    write(CONSENT_KEY, "1");
+    location.href = GAME_PAGE;
+  });
+</script>
 </body>
 </html>
